@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ButteredUpsad - Interactive Website RPG</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+    <!-- Regular Website Layout -->
+    <header>
+        <nav>
+            <div class="logo">ButteredUpsad</div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#blog">Blog</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><button id="start-game">Start Game</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="page-section active">
+            <div class="container">
+                <h1>Welcome to ButteredUpsad</h1>
+                <p>This seems like a normal website, but it hides a secret interactive RPG.</p>
+                <p>Click the "Start Game" button in the navigation to begin your adventure!</p>
+            </div>
+        </section>
+
+        <section id="about" class="page-section">
+            <div class="container">
+                <h1>About</h1>
+                <p>ButteredUpsad is an experimental project that blends website design with game mechanics.</p>
+                <p>Once you activate the game, you can interact with ANY element on this page.</p>
+                <ul>
+                    <li>Click objects to inspect or attack them</li>
+                    <li>Drag elements to move them</li>
+                    <li>Collect items into your inventory</li>
+                    <li>Break through walls and barriers</li>
+                    <li>Talk to NPCs and complete quests</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="blog" class="page-section">
+            <div class="container">
+                <h1>Dev Blog</h1>
+                <article class="blog-post">
+                    <h2>Building a Website RPG</h2>
+                    <p class="post-meta">March 24, 2025</p>
+                    <p>Today we're launching the first version of ButteredUpsad, a website that transforms into an RPG...</p>
+                </article>
+                <article class="blog-post">
+                    <h2>The Philosophy of No Invisible Walls</h2>
+                    <p class="post-meta">March 23, 2025</p>
+                    <p>In traditional games, designers often use invisible walls to keep players within bounds...</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="contact" class="page-section">
+            <div class="container">
+                <h1>Contact</h1>
+                <form id="contact-form">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit">Send</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 ButteredUpsad. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Game Layer (Hidden by default) -->
+    <div id="game-container" class="hidden">
+        <!-- Canvas for rendering game graphics -->
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- Player character -->
+        <div id="player" class="game-object"></div>
+        
+        <!-- Inventory panel -->
+        <div id="inventory-panel" class="hidden">
+            <h3>Inventory</h3>
+            <div id="inventory-items"></div>
+        </div>
+        
+        <!-- Dialog box for NPCs -->
+        <div id="dialog-box" class="hidden">
+            <div id="dialog-text"></div>
+            <div id="dialog-options"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/website.js"></script>
+    <script src="js/game/engine.js"></script>
+    <script src="js/game/player.js"></script>
+    <script src="js/game/world.js"></script>
+    <script src="js/game/objects.js"></script>
+    <script src="js/game/interaction.js"></script>
+    <script src="js/game/inventory.js"></script>
+    <script src="js/game/dialog.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
