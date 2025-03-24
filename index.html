@@ -6,6 +6,7 @@
     <title>ButteredUpsad - Interactive Website RPG</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <!-- Regular Website Layout -->
@@ -96,7 +97,16 @@
         <canvas id="game-canvas"></canvas>
         
         <!-- Player character -->
-        <div id="player" class="game-object"></div>
+        <div id="player" class="game-object">
+            <div class="health-bar-container">
+                <div class="health-bar"></div>
+            </div>
+        </div>
+        
+        <!-- Inventory toggle button -->
+        <button id="inventory-toggle" title="Inventory" data-count="0">
+            <i class="fas fa-backpack"></i>
+        </button>
         
         <!-- Inventory panel -->
         <div id="inventory-panel" class="hidden">
@@ -104,11 +114,25 @@
             <div id="inventory-items"></div>
         </div>
         
+        <!-- Quests toggle button -->
+        <button id="quests-toggle" title="Quests" data-count="0">
+            <i class="fas fa-scroll"></i>
+        </button>
+        
+        <!-- Quests panel -->
+        <div id="quests-panel" class="hidden">
+            <h3>Quests</h3>
+            <div id="quest-list"></div>
+        </div>
+        
         <!-- Dialog box for NPCs -->
         <div id="dialog-box" class="hidden">
             <div id="dialog-text"></div>
             <div id="dialog-options"></div>
         </div>
+        
+        <!-- Notification container -->
+        <div id="notification-container"></div>
     </div>
 
     <!-- Scripts -->
@@ -120,6 +144,8 @@
     <script src="js/game/interaction.js"></script>
     <script src="js/game/inventory.js"></script>
     <script src="js/game/dialog.js"></script>
+    <script src="js/game/quests.js"></script>
+    <script src="js/game/ui.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
