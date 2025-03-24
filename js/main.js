@@ -6,6 +6,54 @@
 // Global game engine instance for easy access from all modules
 let gameEngine = null;
 
+/**
+ * Toggle game state (start/stop)
+ */
+function toggleGame() {
+    if (!gameEngine) return;
+    
+    const startGameButton = document.getElementById('start-game');
+    
+    if (gameEngine.isRunning) {
+        // Stop the game
+        gameEngine.stop();
+        
+        if (startGameButton) {
+            startGameButton.textContent = 'Start Game';
+            startGameButton.classList.remove('active');
+        }
+    } else {
+        // Disable button during startup
+        if (startGameButton) {
+            startGameButton.disabled = true;
+        }
+        
+        // Start the game
+        try {
+            gameEngine.start();
+            
+            // Spawn some initial objects
+            if (gameEngine.objectManager) {
+                gameEngine.objectManager.spawnRandomObjects(15);
+            }
+            
+            // Update button state
+            if (startGameButton) {
+                startGameButton.textContent = 'Stop Game';
+                startGameButton.classList.add('active');
+                startGameButton.disabled = false;
+            }
+        } catch (err) {
+            console.error('Error starting game:', err);
+            
+            // Re-enable button
+            if (startGameButton) {
+                startGameButton.disabled = false;
+            }
+        }
+    }
+}
+
 // Make toggleGame globally available to fix button references
 window.toggleGame = toggleGame;
 
@@ -68,54 +116,6 @@ function initGame() {
             }
         });
     });
-}
-
-/**
- * Toggle game state (start/stop)
- */
-function toggleGame() {
-    if (!gameEngine) return;
-    
-    const startGameButton = document.getElementById('start-game');
-    
-    if (gameEngine.isRunning) {
-        // Stop the game
-        gameEngine.stop();
-        
-        if (startGameButton) {
-            startGameButton.textContent = 'Start Game';
-            startGameButton.classList.remove('active');
-        }
-    } else {
-        // Disable button during startup
-        if (startGameButton) {
-            startGameButton.disabled = true;
-        }
-        
-        // Start the game
-        try {
-            gameEngine.start();
-            
-            // Spawn some initial objects
-            if (gameEngine.objectManager) {
-                gameEngine.objectManager.spawnRandomObjects(15);
-            }
-            
-            // Update button state
-            if (startGameButton) {
-                startGameButton.textContent = 'Stop Game';
-                startGameButton.classList.add('active');
-                startGameButton.disabled = false;
-            }
-        } catch (err) {
-            console.error('Error starting game:', err);
-            
-            // Re-enable button
-            if (startGameButton) {
-                startGameButton.disabled = false;
-            }
-        }
-    }
 }
 
 /**
