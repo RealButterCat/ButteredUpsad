@@ -5,6 +5,8 @@
 
 class GameEngine {
     constructor() {
+        console.log('Initializing game engine...');
+        
         // Game state
         this.isRunning = false;
         this.lastTimestamp = 0;
@@ -14,7 +16,14 @@ class GameEngine {
         this.fps = 0;
         this.gameContainer = document.getElementById('game-container');
         this.canvas = document.getElementById('game-canvas');
-        this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
+        
+        // Ensure canvas exists
+        if (!this.canvas) {
+            console.error('Game canvas element not found!');
+        } else {
+            this.ctx = this.canvas.getContext('2d');
+            console.log('Canvas context created');
+        }
         
         // Game systems
         this.player = null;
@@ -41,69 +50,114 @@ class GameEngine {
         
         // Event listeners
         window.addEventListener('resize', this.handleResize);
+        
+        console.log('Game engine constructor completed');
     }
     
     /**
      * Start the game
      */
     start() {
-        if (this.isRunning) return;
+        if (this.isRunning) {
+            console.log('Game is already running, ignoring start request');
+            return;
+        }
         
         console.log('Starting game engine...');
         
-        // Set up game systems in order
-        this.player = new Player(
-            window.innerWidth / 2, 
-            window.innerHeight / 2
-        );
-        
-        this.world = new World();
-        this.objectManager = new GameObjectManager();
-        this.interactionManager = new InteractionManager(this);
-        this.inventoryManager = new InventoryManager();
-        this.dialogManager = new DialogManager();
-        
-        // Set the quest manager if not already set
-        if (!this.questManager) {
-            this.questManager = new QuestManager();
+        try {
+            // Set up game systems in order
+            console.log('Creating player...');
+            this.player = new Player(
+                window.innerWidth / 2, 
+                window.innerHeight / 2
+            );
+            
+            console.log('Creating world...');
+            this.world = new World();
+            
+            console.log('Creating object manager...');
+            this.objectManager = new GameObjectManager();
+            
+            console.log('Creating interaction manager...');
+            this.interactionManager = new InteractionManager(this);
+            
+            console.log('Creating inventory manager...');
+            this.inventoryManager = new InventoryManager();
+            
+            console.log('Creating dialog manager...');
+            this.dialogManager = new DialogManager();
+            
+            // Set the quest manager if not already set
+            if (!this.questManager) {
+                console.log('Creating quest manager...');
+                this.questManager = new QuestManager();
+            }
+            
+            // Create UI manager if not already set
+            if (!this.uiManager) {
+                console.log('Creating UI manager...');
+                this.uiManager = new UIManager();
+            }
+            
+            // Load saved game state if exists
+            console.log('Loading game state...');
+            this.loadGameState();
+            
+            // Show game container
+            if (this.gameContainer) {
+                console.log('Showing game container...');
+                this.gameContainer.classList.remove('hidden');
+                this.gameContainer.classList.add('active');
+            } else {
+                console.error('Game container not found!');
+            }
+            
+            // Reset timing variables
+            this.lastTimestamp = performance.now();
+            this.frameCount = 0;
+            this.lastFpsUpdate = this.lastTimestamp;
+            
+            // Start game loop
+            console.log('Starting game loop...');
+            this.isRunning = true;
+            requestAnimationFrame(this.gameLoop);
+            
+            // Initialize interactions
+            if (this.interactionManager) {
+                console.log('Initializing interaction manager...');
+                this.interactionManager.initialize();
+            }
+            
+            // Show welcome notification
+            if (this.uiManager) {
+                console.log('Showing welcome notification...');
+                this.uiManager.showNotification('Welcome to ButteredUpsad!', 'info');
+            }
+            
+            console.log('Game engine started!');
+        } catch (err) {
+            console.error('Error starting game engine:', err);
+            this.isRunning = false;
+            
+            // Show error notification
+            if (this.uiManager) {
+                this.uiManager.showNotification('Error starting game: ' + err.message, 'error');
+            }
+            
+            // Re-throw to let caller handle
+            throw err;
         }
-        
-        // Load saved game state if exists
-        this.loadGameState();
-        
-        // Show game container
-        if (this.gameContainer) {
-            this.gameContainer.classList.remove('hidden');
-            this.gameContainer.classList.add('active');
-        }
-        
-        // Reset timing variables
-        this.lastTimestamp = performance.now();
-        this.frameCount = 0;
-        this.lastFpsUpdate = this.lastTimestamp;
-        
-        // Start game loop
-        this.isRunning = true;
-        requestAnimationFrame(this.gameLoop);
-        
-        // Initialize interactions
-        if (this.interactionManager) {
-            this.interactionManager.initialize();
-        }
-        
-        // Show welcome notification
-        if (this.uiManager) {
-            this.uiManager.showNotification('Welcome to ButteredUpsad!', 'info');
-        }
-        
-        console.log('Game engine started!');
     }
     
     /**
      * Stop the game
      */
     stop() {
-        if (!this.isRunning) return;
+        if (!this.isRunning) {
+            console.log('Game is not running, ignoring stop request');
+            return;
+        }
         
         console.log('Stopping game engine...');
         
@@ -112,15 +166,20 @@ class GameEngine {
         
         // Hide game container
         if (this.gameContainer) {
+            console.log('Hiding game container...');
             this.gameContainer.classList.remove('active');
             this.gameContainer.classList.add('hidden');
+        } else {
+            console.error('Game container not found!');
         }
         
         // Stop game loop
+        console.log('Stopping game loop...');
         this.isRunning = false;
         
         // Clean up
         if (this.interactionManager) {
+            console.log('Cleaning up interaction manager...');
             this.interactionManager.cleanup();
         }
         
@@ -131,7 +190,10 @@ class GameEngine {
      * Game loop
      */
     gameLoop(timestamp) {
-        if (!this.isRunning) return;
+        if (!this.isRunning) {
+            console.log('Game is not running, stopping game loop');
+            return;
+        }
         
         // Calculate delta time (time since last frame in seconds)
         const deltaTime = (timestamp - this.lastTimestamp) / 1000;
@@ -159,8 +221,10 @@ class GameEngine {
             this.lastFpsUpdate = timestamp;
             this.frameCount = 0;
             
-            // Optionally display FPS
-            // console.log(`FPS: ${this.fps}`);
+            // Log FPS occasionally
+            if (this.gameTime % 5 < 0.1) {
+                console.log(`FPS: ${this.fps}`);
+            }
         }
         
         // Schedule next frame
@@ -286,7 +350,10 @@ class GameEngine {
      * Render game objects
      */
     render() {
-        if (!this.ctx) return;
+        if (!this.ctx) {
+            console.error('Canvas context not found, cannot render');
+            return;
+        }
         
         // Render world
         if (this.world) {
@@ -338,6 +405,12 @@ class GameEngine {
      * Initialize canvas
      */
     initializeCanvas() {
+        console.log('Initializing canvas...');
+        if (!this.canvas) {
+            console.error('Canvas not found, cannot initialize');
+            return;
+        }
+        
         this.handleResize();
     }
     
@@ -345,7 +418,9 @@ class GameEngine {
      * Clear canvas
      */
     clearCanvas() {
-        if (!this.ctx || !this.canvas) return;
+        if (!this.ctx || !this.canvas) {
+            return;
+        }
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
     
@@ -353,18 +428,24 @@ class GameEngine {
      * Handle window resize
      */
     handleResize() {
-        if (!this.canvas) return;
+        if (!this.canvas) {
+            console.error('Canvas not found, cannot resize');
+            return;
+        }
+        
+        console.log('Handling resize, window dimensions:', window.innerWidth, 'x', window.innerHeight);
         
         // Get device pixel ratio for better canvas clarity
         const dpr = window.devicePixelRatio || 1;
         
-        // Set canvas size based on CSS size
-        const rect = this.canvas.getBoundingClientRect();
-        this.canvas.width = rect.width * dpr;
-        this.canvas.height = rect.height * dpr;
+        // Set canvas size based on window size
+        this.canvas.width = window.innerWidth * dpr;
+        this.canvas.height = window.innerHeight * dpr;
         
-        // Scale canvas to match CSS size
-        this.ctx.scale(dpr, dpr);
+        // Scale canvas context
+        if (this.ctx) {
+            this.ctx.scale(dpr, dpr);
+        }
         
         // Fix CSS size
         this.canvas.style.width = `${window.innerWidth}px`;
@@ -374,6 +455,8 @@ class GameEngine {
         if (this.world && this.world.handleResize) {
             this.world.handleResize();
         }
+        
+        console.log('Canvas resized to:', this.canvas.width, 'x', this.canvas.height);
     }
     
     /**
