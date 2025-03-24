@@ -19,14 +19,26 @@ document.addEventListener('DOMContentLoaded', () => {
  * Initialize the game
  */
 function initGame() {
-    // Create the game engine instance
+    // Create UI manager first (for notifications and other UI elements)
+    const uiManager = new UIManager();
+    
+    // Create game engine
     gameEngine = new GameEngine();
+    
+    // Add reference to UI manager
+    gameEngine.uiManager = uiManager;
+    
+    // Set up quest manager
+    gameEngine.questManager = new QuestManager();
     
     // Set up start game button
     const startGameButton = document.getElementById('start-game');
     
     if (startGameButton) {
         startGameButton.addEventListener('click', () => {
+            // Prevent multiple starts
+            if (startGameButton.disabled) return;
+            
             toggleGame();
         });
     }
@@ -36,6 +48,17 @@ function initGame() {
         if (event.key.toLowerCase() === 'g' && event.ctrlKey) {
             toggleGame();
         }
+    });
+    
+    // Handle page section changes for quest tracking
+    const navLinks = document.querySelectorAll('.nav-links a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            const sectionId = link.getAttribute('href');
+            if (sectionId && sectionId.startsWith('#') && gameEngine && gameEngine.questManager) {
+                gameEngine.questManager.updateVisitQuests(sectionId.substring(1));
+            }
+        });
     });
 }
 
@@ -53,23 +76,45 @@ function toggleGame() {
         
         if (startGameButton) {
             startGameButton.textContent = 'Start Game';
+            startGameButton.classList.remove('active');
+            startGameButton.disabled = false;
         }
         
         console.log('Game stopped');
     } else {
-        // Start the game
-        gameEngine.start();
-        
-        // Spawn some initial objects
-        if (gameEngine.objectManager) {
-            gameEngine.objectManager.spawnRandomObjects(15);
-        }
-        
+        // Disable button during startup
         if (startGameButton) {
-            startGameButton.textContent = 'Stop Game';
+            startGameButton.disabled = true;
         }
         
-        console.log('Game started');
+        // Start loading animation
+        const loadingNotification = gameEngine.uiManager?.showNotification('Loading game...', 'info', 10000);
+        
+        // Use a timeout to simulate loading and show the notification
+        setTimeout(() => {
+            // Start the game
+            gameEngine.start();
+            
+            // Spawn some initial objects
+            if (gameEngine.objectManager) {
+                gameEngine.objectManager.spawnRandomObjects(15);
+            }
+            
+            // Update button state
+            if (startGameButton) {
+                startGameButton.textContent = 'Stop Game';
+                startGameButton.classList.add('active');
+                startGameButton.disabled = false;
+            }
+            
+            // Remove loading notification and show success
+            if (loadingNotification && gameEngine.uiManager) {
+                gameEngine.uiManager.removeNotification(loadingNotification);
+                gameEngine.uiManager.showNotification('Game started!', 'success');
+            }
+            
+            console.log('Game started');
+        }, 500);
     }
 }
 
@@ -94,7 +139,10 @@ function addDebugReset() {
     
     resetButton.addEventListener('click', () => {
         if (gameEngine) {
-            gameEngine.resetGameState();
+            // First confirm with user
+            if (confirm('Are you sure you want to reset the game? All progress will be lost.')) {
+                gameEngine.resetGameState();
+            }
         }
     });
     
@@ -164,22 +212,258 @@ const injectGameStyles = () => {
             50% { filter: saturate(2) brightness(1.2); }
         }
         
-        /* Floating text for collectibles */
-        .floating-text {
-            position: absolute;
-            color: white;
-            font-weight: bold;
-            pointer-events: none;
-            transition: opacity 0.5s, transform 0.5s;
-            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
-            z-index: 100;
+        /* Player animations */
+        .invulnerable {
+            animation: invulnerable-flash 0.5s infinite alternate;
         }
         
-        /* Dragging objects */
-        .dragging {
-            opacity: 0.7;
-            transform: scale(1.1);
-            z-index: 100 !important;
+        @keyframes invulnerable-flash {
+            from { opacity: 1; }
+            to { opacity: 0.5; }
+        }
+        
+        .level-up {
+            animation: level-up-glow 1s ease-in-out;
+        }
+        
+        @keyframes level-up-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(231, 76, 60, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(46, 204, 113, 0.8); }
+        }
+        
+        .damaged {
+            animation: damaged-flash 0.2s;
+        }
+        
+        @keyframes damaged-flash {
+            0%, 100% { background-color: #e74c3c; }
+            50% { background-color: #e67e22; }
+        }
+        
+        .dead {
+            animation: dead-spin 1s ease-in-out;
+            opacity: 0.5;
+        }
+        
+        @keyframes dead-spin {
+            0% { transform: rotate(0) scale(1); }
+            100% { transform: rotate(720deg) scale(0); }
+        }
+        
+        /* Object interactions */
+        .interacting {
+            animation: interacting-pulse 0.3s ease-in-out;
+        }
+        
+        @keyframes interacting-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        /* Tooltip styles */
+        .game-tooltip {
+            position: fixed;
+            background-color: rgba(44, 62, 80, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 14px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .game-tooltip.show {
+            opacity: 1;
+        }
+        
+        /* Context menu styles */
+        .game-context-menu {
+            position: fixed;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            min-width: 150px;
+            z-index: 1000;
+        }
+        
+        .game-context-menu-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .game-context-menu-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .game-context-menu-item.disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+        
+        /* Modal styles */
+        .game-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .game-modal-overlay.show {
+            opacity: 1;
+        }
+        
+        .game-modal {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            width: 80%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            transform: scale(0.8);
+            transition: transform 0.3s;
+        }
+        
+        .game-modal.show {
+            transform: scale(1);
+        }
+        
+        /* Start game button in active state */
+        #start-game.active {
+            background-color: #c0392b;
+        }
+        
+        /* Radial menu styles */
+        .game-radial-menu {
+            position: fixed;
+            width: 0;
+            height: 0;
+            z-index: 500;
+        }
+        
+        .game-radial-item {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(44, 62, 80, 0.9);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            opacity: 0;
+        }
+        
+        .game-radial-menu.show .game-radial-item {
+            opacity: 1;
+        }
+        
+        .game-radial-item:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+            background-color: #3498db;
+        }
+        
+        .game-radial-tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            white-space: nowrap;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        
+        .game-radial-item:hover .game-radial-tooltip {
+            opacity: 1;
+        }
+        
+        /* Progress bar styles */
+        .game-progress-container {
+            position: absolute;
+            padding: 5px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+        }
+        
+        .game-progress-label {
+            color: white;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+        
+        .game-progress-bar {
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .game-progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease-out;
+        }
+        
+        .game-progress-percentage {
+            color: white;
+            font-size: 10px;
+            text-align: center;
+            margin-top: 2px;
+        }
+        
+        /* Completed quests container */
+        .completed-quests-container {
+            max-height: 500px;
+            overflow-y: auto;
+            transition: max-height 0.3s;
+        }
+        
+        .completed-quests-container.collapsed {
+            max-height: 0;
+            overflow: hidden;
+        }
+        
+        .completed-header {
+            cursor: pointer;
+            padding: 5px;
+            margin-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            color: #bdc3c7;
+        }
+        
+        .completed-header:hover {
+            color: white;
+        }
+        
+        /* Floating text for collecting items, etc. */
+        .floating-text {
+            position: absolute;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            z-index: 50;
+            transform: translateX(-50%);
         }
     `;
     
@@ -190,3 +474,6 @@ const injectGameStyles = () => {
 
 // Inject game styles immediately
 injectGameStyles();
+
+// Global game engine instance for easy access from all modules
+let gameEngine = null;
