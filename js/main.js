@@ -19,14 +19,16 @@ document.addEventListener('DOMContentLoaded', () => {
  * Initialize the game
  */
 function initGame() {
-    // Create UI manager first (for notifications and other UI elements)
-    const uiManager = new UIManager();
-    
-    // Create game engine
+    // Create game engine first
     gameEngine = new GameEngine();
+    console.log('Game engine created');
+    
+    // Create UI manager
+    const uiManager = new UIManager();
     
     // Add reference to UI manager
     gameEngine.uiManager = uiManager;
+    console.log('UI manager attached to game engine');
     
     // Set up quest manager
     gameEngine.questManager = new QuestManager();
@@ -35,17 +37,37 @@ function initGame() {
     const startGameButton = document.getElementById('start-game');
     
     if (startGameButton) {
-        startGameButton.addEventListener('click', () => {
-            // Prevent multiple starts
-            if (startGameButton.disabled) return;
+        console.log('Found start game button, attaching click handler');
+        
+        // Remove any existing event listeners
+        const newButton = startGameButton.cloneNode(true);
+        startGameButton.parentNode.replaceChild(newButton, startGameButton);
+        
+        // Add new event listener
+        newButton.addEventListener('click', function(event) {
+            console.log('Start button clicked!');
+            event.preventDefault();
+            event.stopPropagation();
             
+            // Prevent multiple clicks by disabling temporarily
+            newButton.disabled = true;
+            
+            // Toggle game state
             toggleGame();
+            
+            // Re-enable after a short delay
+            setTimeout(() => {
+                newButton.disabled = false;
+            }, 1000);
         });
+    } else {
+        console.error('Start game button not found!');
     }
     
     // Add keyboard shortcut (G) to toggle game
     document.addEventListener('keydown', (event) => {
         if (event.key.toLowerCase() === 'g' && event.ctrlKey) {
+            console.log('Ctrl+G keyboard shortcut detected');
             toggleGame();
         }
     });
@@ -66,54 +88,79 @@ function initGame() {
  * Toggle game state (start/stop)
  */
 function toggleGame() {
-    if (!gameEngine) return;
+    console.log('Toggle game function called');
+    
+    if (!gameEngine) {
+        console.error('Game engine not found!');
+        return;
+    }
     
     const startGameButton = document.getElementById('start-game');
     
     if (gameEngine.isRunning) {
+        console.log('Game is currently running, stopping game...');
+        
         // Stop the game
         gameEngine.stop();
         
         if (startGameButton) {
             startGameButton.textContent = 'Start Game';
             startGameButton.classList.remove('active');
-            startGameButton.disabled = false;
         }
         
         console.log('Game stopped');
     } else {
-        // Disable button during startup
+        console.log('Game is not running, starting game...');
+        
+        // Disable button during startup if exists
         if (startGameButton) {
             startGameButton.disabled = true;
         }
         
-        // Start loading animation
-        const loadingNotification = gameEngine.uiManager?.showNotification('Loading game...', 'info', 10000);
+        // Show loading notification if UI manager exists
+        let loadingNotification = null;
+        if (gameEngine.uiManager) {
+            loadingNotification = gameEngine.uiManager.showNotification('Loading game...', 'info', 10000);
+        }
         
         // Use a timeout to simulate loading and show the notification
         setTimeout(() => {
-            // Start the game
-            gameEngine.start();
-            
-            // Spawn some initial objects
-            if (gameEngine.objectManager) {
-                gameEngine.objectManager.spawnRandomObjects(15);
+            try {
+                // Start the game
+                gameEngine.start();
+                
+                // Spawn some initial objects
+                if (gameEngine.objectManager) {
+                    gameEngine.objectManager.spawnRandomObjects(15);
+                }
+                
+                // Update button state
+                if (startGameButton) {
+                    startGameButton.textContent = 'Stop Game';
+                    startGameButton.classList.add('active');
+                    startGameButton.disabled = false;
+                }
+                
+                // Remove loading notification and show success
+                if (loadingNotification && gameEngine.uiManager) {
+                    gameEngine.uiManager.removeNotification(loadingNotification);
+                    gameEngine.uiManager.showNotification('Game started!', 'success');
+                }
+                
+                console.log('Game started successfully');
+            } catch (err) {
+                console.error('Error starting game:', err);
+                
+                // Show error notification
+                if (gameEngine.uiManager) {
+                    gameEngine.uiManager.showNotification('Error starting game: ' + err.message, 'error');
+                }
+                
+                // Re-enable button
+                if (startGameButton) {
+                    startGameButton.disabled = false;
+                }
             }
-            
-            // Update button state
-            if (startGameButton) {
-                startGameButton.textContent = 'Stop Game';
-                startGameButton.classList.add('active');
-                startGameButton.disabled = false;
-            }
-            
-            // Remove loading notification and show success
-            if (loadingNotification && gameEngine.uiManager) {
-                gameEngine.uiManager.removeNotification(loadingNotification);
-                gameEngine.uiManager.showNotification('Game started!', 'success');
-            }
-            
-            console.log('Game started');
         }, 500);
     }
 }
@@ -344,6 +391,12 @@ const injectGameStyles = () => {
             background-color: #c0392b;
         }
         
+        /* Start game button hover state - add this */
+        #start-game:hover {
+            background-color: #c0392b;
+            cursor: pointer;
+        }
+        
         /* Radial menu styles */
         .game-radial-menu {
             position: fixed;
@@ -477,3 +530,13 @@ injectGameStyles();
 
 // Global game engine instance for easy access from all modules
 let gameEngine = null;
+
+// For debugging, expose to global scope
+window.debugGame = function() {
+    console.log('Game engine:', gameEngine);
+    if (gameEngine) {
+        console.log('Is running:', gameEngine.isRunning);
+        console.log('Player:', gameEngine.player);
+        console.log('Object manager:', gameEngine.objectManager);
+    }
+};
