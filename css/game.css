@@ -1,0 +1,196 @@
+/* Game-specific Styles */
+
+/* Game Container */
+#game-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+#game-container.active {
+    pointer-events: all;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Game Canvas */
+#game-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+}
+
+/* Game Objects */
+.game-object {
+    position: absolute;
+    z-index: 6;
+    transition: transform 0.1s ease-out;
+}
+
+/* Player Character */
+#player {
+    width: 30px;
+    height: 30px;
+    background-color: #e74c3c;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 7;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+/* NPC Characters */
+.npc {
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 25px solid #3498db;
+    position: absolute;
+    cursor: pointer;
+    transition: border-bottom-color 0.2s;
+}
+
+.npc:hover {
+    border-bottom-color: #2980b9;
+}
+
+/* Breakable Objects */
+.breakable {
+    background-color: #95a5a6;
+    transition: opacity 0.2s, background-color 0.2s;
+    cursor: pointer;
+}
+
+.breakable:hover {
+    background-color: #7f8c8d;
+}
+
+.breakable.damaged-1 {
+    opacity: 0.8;
+}
+
+.breakable.damaged-2 {
+    opacity: 0.5;
+}
+
+/* Interactable Objects */
+.interactable {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.interactable:hover {
+    transform: scale(1.05);
+}
+
+/* Collectible Items */
+.collectible {
+    border-radius: 50%;
+    background-color: #f1c40f;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.collectible:hover {
+    transform: scale(1.1);
+    background-color: #f39c12;
+}
+
+/* Inventory Panel */
+#inventory-panel {
+    position: fixed;
+    right: 20px;
+    top: 80px;
+    width: 200px;
+    background-color: rgba(44, 62, 80, 0.9);
+    color: #fff;
+    border-radius: 5px;
+    padding: 15px;
+    z-index: 15;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+#inventory-panel h3 {
+    margin-bottom: 10px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 5px;
+}
+
+#inventory-items {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.inventory-item {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+}
+
+.inventory-item:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Dialog Box */
+#dialog-box {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 600px;
+    background-color: rgba(44, 62, 80, 0.95);
+    color: #fff;
+    border-radius: 5px;
+    padding: 20px;
+    z-index: 20;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+#dialog-text {
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+#dialog-options button {
+    background-color: rgba(52, 152, 219, 0.7);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#dialog-options button:hover {
+    background-color: rgba(52, 152, 219, 1);
+}
+
+/* Shake animation for damaged objects */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.shake {
+    animation: shake 0.2s ease-in-out;
+}
