@@ -8,12 +8,20 @@ class InventoryManager {
         this.items = [];
         this.maxItems = 12; // Maximum number of items in inventory
         this.inventoryPanel = document.getElementById('inventory-panel');
+        this.inventoryToggle = document.getElementById('inventory-toggle');
         this.inventoryItems = document.getElementById('inventory-items');
+        this.isPanelVisible = false;
+        this.isDragging = false;
+        this.draggedItem = null;
         
         // Bind methods
         this.handleCollectItem = this.handleCollectItem.bind(this);
         this.handleItemUse = this.handleItemUse.bind(this);
         this.toggleInventoryPanel = this.toggleInventoryPanel.bind(this);
+        this.handleDragStart = this.handleDragStart.bind(this);
+        this.handleDragEnd = this.handleDragEnd.bind(this);
+        this.handleDragOver = this.handleDragOver.bind(this);
+        this.handleDrop = this.handleDrop.bind(this);
         
         // Set up event listeners
         document.addEventListener('collect-item', (event) => {
@@ -22,20 +30,11 @@ class InventoryManager {
             }
         });
         
-        // Toggle inventory panel on hover near right edge
-        document.addEventListener('mousemove', (event) => {
-            const edgeThreshold = 50;
-            
-            if (this.inventoryPanel && event.clientX > window.innerWidth - edgeThreshold) {
-                this.showInventoryPanel();
-            } else if (this.inventoryPanel && 
-                     this.inventoryPanel.classList.contains('visible') && 
-                     event.clientX < window.innerWidth - 250) {
-                this.hideInventoryPanel();
-            }
-        });
+        // Add event listeners for drag/drop
+        document.addEventListener('dragover', this.handleDragOver);
+        document.addEventListener('drop', this.handleDrop);
         
-        // Initialize
+        // Initialize inventory
         this.initialize();
     }
     
@@ -45,16 +44,36 @@ class InventoryManager {
     initialize() {
         console.log('Initializing inventory manager');
         
-        if (this.inventoryPanel) {
-            // Create inventory panel toggle button
-            const toggleButton = document.createElement('button');
-            toggleButton.id = 'inventory-toggle';
-            toggleButton.textContent = 'I';
-            toggleButton.className = 'inventory-toggle';
-            toggleButton.addEventListener('click', this.toggleInventoryPanel);
-            
-            document.body.appendChild(toggleButton);
+        // Set up inventory toggle button
+        if (this.inventoryToggle) {
+            this.inventoryToggle.addEventListener('click', this.toggleInventoryPanel);
+            this.updateInventoryCounter();
         }
+        
+        // Create testing items
+        this.addStartingItems();
+    }
+    
+    /**
+     * Add some items for testing
+     */
+    addStartingItems() {
+        // Add a couple coins to start with
+        this.addItem({
+            id: 'coin-1',
+            type: 'coin',
+            value: 1,
+            name: 'Gold Coin',
+            description: 'A shiny gold coin. Collect these for points!'
+        });
+        
+        this.addItem({
+            id: 'key-1',
+            type: 'key',
+            value: 1,
+            name: 'Brass Key',
+            description: 'A small brass key. It might open something nearby.'
+        });
     }
     
     /**
@@ -63,8 +82,13 @@ class InventoryManager {
     toggleInventoryPanel() {
         if (!this.inventoryPanel) return;
         
-        this.inventoryPanel.classList.toggle('hidden');
-        this.inventoryPanel.classList.toggle('visible');
+        this.isPanelVisible = !this.isPanelVisible;
+        
+        if (this.isPanelVisible) {
+            this.showInventoryPanel();
+        } else {
+            this.hideInventoryPanel();
+        }
     }
     
     /**
@@ -75,6 +99,10 @@ class InventoryManager {
         
         this.inventoryPanel.classList.remove('hidden');
         this.inventoryPanel.classList.add('visible');
+        this.isPanelVisible = true;
+        
+        // Refresh inventory display
+        this.refreshInventoryUI();
     }
     
     /**
@@ -85,6 +113,7 @@ class InventoryManager {
         
         this.inventoryPanel.classList.remove('visible');
         this.inventoryPanel.classList.add('hidden');
+        this.isPanelVisible = false;
     }
     
     /**
@@ -93,8 +122,29 @@ class InventoryManager {
     addItem(item) {
         // Check if inventory is full
         if (this.items.length >= this.maxItems) {
+            if (gameEngine && gameEngine.uiManager) {
+                gameEngine.uiManager.showNotification('Inventory is full!', 'warning');
+            }
             console.log('Inventory is full!');
             return false;
+        }
+        
+        // Ensure the item has an ID if not provided
+        if (!item.id) {
+            item.id = `item-${Math.random().toString(36).substr(2, 9)}`;
+        }
+        
+        // Add default properties if not specified
+        if (!item.name) {
+            item.name = this.capitalizeFirstLetter(item.type);
+        }
+        
+        if (!item.description) {
+            item.description = `A ${item.type}.`;
+        }
+        
+        if (item.value === undefined) {
+            item.value = 1;
         }
         
         // Add item to inventory
@@ -102,6 +152,12 @@ class InventoryManager {
         
         // Update UI
         this.refreshInventoryUI();
+        this.updateInventoryCounter();
+        
+        // Show notification
+        if (gameEngine && gameEngine.uiManager) {
+            gameEngine.uiManager.showNotification(`Added ${item.name} to inventory`, 'success');
+        }
         
         console.log(`Added ${item.type} to inventory`);
         return true;
@@ -117,6 +173,12 @@ class InventoryManager {
             
             // Update UI
             this.refreshInventoryUI();
+            this.updateInventoryCounter();
+            
+            // Show notification
+            if (gameEngine && gameEngine.uiManager) {
+                gameEngine.uiManager.showNotification(`Removed ${item.name} from inventory`, 'info');
+            }
             
             console.log(`Removed ${item.type} from inventory`);
             return item;
@@ -139,12 +201,50 @@ class InventoryManager {
             
             switch (item.type) {
                 case 'coin':
-                    // Coins just add to score, not consumed
+                    // Coins increase score
+                    if (gameEngine && gameEngine.player) {
+                        gameEngine.player.gainExperience(item.value * 5);
+                    }
+                    consumed = true;
                     break;
                     
                 case 'key':
-                    // Keys can be used to unlock things
-                    // For now, just consume the item
+                    // Keys can be used to unlock things if near a locked object
+                    if (gameEngine && gameEngine.objectManager) {
+                        const lockedObjects = gameEngine.objectManager.getObjectsOfType('locked');
+                        let unlocked = false;
+                        
+                        for (const lockObj of lockedObjects) {
+                            // Check if player is near this locked object
+                            if (gameEngine.player && this.isPlayerNearObject(lockObj)) {
+                                // Unlock the object
+                                lockObj.unlock();
+                                unlocked = true;
+                                
+                                // Show notification
+                                if (gameEngine.uiManager) {
+                                    gameEngine.uiManager.showNotification(`Unlocked ${lockObj.name || 'object'}!`, 'success');
+                                }
+                                break;
+                            }
+                        }
+                        
+                        if (!unlocked) {
+                            // No nearby locked objects
+                            if (gameEngine.uiManager) {
+                                gameEngine.uiManager.showNotification('Nothing nearby to unlock', 'info');
+                            }
+                            return false; // Don't consume the key
+                        }
+                    }
+                    consumed = true;
+                    break;
+                    
+                case 'potion':
+                    // Potions heal the player
+                    if (gameEngine && gameEngine.player) {
+                        gameEngine.player.heal(item.value * 10);
+                    }
                     consumed = true;
                     break;
                     
@@ -155,6 +255,11 @@ class InventoryManager {
                     setTimeout(() => {
                         document.body.classList.remove('special-effect');
                     }, 2000);
+                    
+                    // Also give XP
+                    if (gameEngine && gameEngine.player) {
+                        gameEngine.player.gainExperience(item.value * 20);
+                    }
                     consumed = true;
                     break;
                     
@@ -175,6 +280,23 @@ class InventoryManager {
     }
     
     /**
+     * Check if player is near an object
+     */
+    isPlayerNearObject(obj) {
+        if (!gameEngine || !gameEngine.player) return false;
+        
+        const player = gameEngine.player;
+        const interactionDistance = 100; // pixels
+        
+        // Calculate distance between centers
+        const dx = (player.x + player.width/2) - (obj.x + obj.width/2);
+        const dy = (player.y + player.height/2) - (obj.y + obj.height/2);
+        const distance = Math.sqrt(dx*dx + dy*dy);
+        
+        return distance <= interactionDistance;
+    }
+    
+    /**
      * Handle collecting an item
      */
     handleCollectItem(itemData) {
@@ -182,9 +304,11 @@ class InventoryManager {
         
         // Create item from data
         const item = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: itemData.id || `item-${Math.random().toString(36).substr(2, 9)}`,
             type: itemData.type || 'generic',
-            value: itemData.value || 1
+            value: itemData.value || 1,
+            name: itemData.name || this.capitalizeFirstLetter(itemData.type || 'Item'),
+            description: itemData.description || 'A collectible item.'
         };
         
         // Add to inventory
@@ -193,28 +317,18 @@ class InventoryManager {
         // Show feedback if added
         if (added) {
             // Create floating text effect at collection position
-            const gameContainer = document.getElementById('game-container');
+            if (gameEngine && gameEngine.uiManager) {
+                gameEngine.uiManager.showFloatingText(
+                    `+ ${item.name}`, 
+                    itemData.x || 0, 
+                    itemData.y || 0, 
+                    '#f1c40f'
+                );
+            }
             
-            if (gameContainer) {
-                const floatingText = document.createElement('div');
-                floatingText.className = 'floating-text';
-                floatingText.textContent = `+1 ${item.type}`;
-                floatingText.style.left = `${event.clientX}px`;
-                floatingText.style.top = `${event.clientY}px`;
-                
-                gameContainer.appendChild(floatingText);
-                
-                // Animate and remove
-                setTimeout(() => {
-                    floatingText.style.opacity = '0';
-                    floatingText.style.transform = 'translateY(-50px)';
-                    
-                    setTimeout(() => {
-                        if (floatingText.parentNode) {
-                            floatingText.parentNode.removeChild(floatingText);
-                        }
-                    }, 500);
-                }, 10);
+            // Update quests if this item type is needed for any active quests
+            if (gameEngine && gameEngine.questManager) {
+                gameEngine.questManager.updateItemCollectionQuests(item.type, 1);
             }
         }
     }
@@ -232,6 +346,172 @@ class InventoryManager {
     }
     
     /**
+     * Handle start of item dragging
+     */
+    handleDragStart(event) {
+        const itemElement = event.currentTarget;
+        const index = parseInt(itemElement.dataset.index, 10);
+        
+        if (isNaN(index)) return;
+        
+        this.isDragging = true;
+        this.draggedItem = {
+            index: index,
+            item: this.items[index]
+        };
+        
+        itemElement.classList.add('dragging');
+        
+        // Set dragged item data
+        event.dataTransfer.setData('text/plain', JSON.stringify({
+            type: 'inventory-item',
+            index: index,
+            itemType: this.items[index].type
+        }));
+        
+        // Set drag image (optional)
+        const dragImage = itemElement.cloneNode(true);
+        dragImage.style.position = 'absolute';
+        dragImage.style.top = '-1000px';
+        document.body.appendChild(dragImage);
+        event.dataTransfer.setDragImage(dragImage, 20, 20);
+        
+        // Clean up the temporary element after a delay
+        setTimeout(() => {
+            document.body.removeChild(dragImage);
+        }, 0);
+    }
+    
+    /**
+     * Handle end of item dragging
+     */
+    handleDragEnd(event) {
+        const itemElements = document.querySelectorAll('.inventory-item');
+        itemElements.forEach(el => el.classList.remove('dragging'));
+        
+        this.isDragging = false;
+        this.draggedItem = null;
+    }
+    
+    /**
+     * Handle drag over event (to allow dropping)
+     */
+    handleDragOver(event) {
+        // Prevent default to allow drop
+        event.preventDefault();
+    }
+    
+    /**
+     * Handle drop event
+     */
+    handleDrop(event) {
+        event.preventDefault();
+        
+        if (!this.isDragging || !this.draggedItem) return;
+        
+        // Get drop target
+        const dropTarget = event.target;
+        
+        // Check if dropped on a game object
+        if (dropTarget.classList.contains('game-object') || 
+            dropTarget.closest('.game-object')) {
+            
+            const gameObj = dropTarget.classList.contains('game-object') ? 
+                dropTarget : dropTarget.closest('.game-object');
+            
+            // Get object ID
+            const objId = gameObj.dataset.id;
+            
+            if (objId && gameEngine && gameEngine.objectManager) {
+                const targetObj = gameEngine.objectManager.getObjectById(objId);
+                
+                if (targetObj) {
+                    console.log(`Dropped ${this.draggedItem.item.type} on ${targetObj.type}`);
+                    
+                    // Handle the interaction based on item and target types
+                    this.handleItemObjectInteraction(this.draggedItem.index, targetObj);
+                }
+            }
+        }
+        
+        // End dragging
+        this.handleDragEnd(event);
+    }
+    
+    /**
+     * Handle interaction between dragged item and game object
+     */
+    handleItemObjectInteraction(itemIndex, targetObj) {
+        if (itemIndex < 0 || itemIndex >= this.items.length) return;
+        
+        const item = this.items[itemIndex];
+        
+        // Different interactions based on item and target types
+        switch (item.type) {
+            case 'key':
+                if (targetObj.type === 'locked') {
+                    // Unlock the object
+                    targetObj.unlock();
+                    
+                    // Remove the key
+                    this.removeItem(itemIndex);
+                    
+                    // Show success notification
+                    if (gameEngine && gameEngine.uiManager) {
+                        gameEngine.uiManager.showNotification(`Unlocked ${targetObj.name || 'object'}!`, 'success');
+                    }
+                } else {
+                    // Key doesn't work on this object
+                    if (gameEngine && gameEngine.uiManager) {
+                        gameEngine.uiManager.showNotification(`Can't use key on this object`, 'info');
+                    }
+                }
+                break;
+                
+            case 'coin':
+                if (targetObj.type === 'npc') {
+                    // Give coin to NPC
+                    targetObj.receiveCoin(item.value);
+                    
+                    // Remove coin from inventory
+                    this.removeItem(itemIndex);
+                    
+                    // Trigger dialog
+                    if (gameEngine && gameEngine.dialogManager) {
+                        const customDialog = {
+                            text: `Thanks for the ${item.value} coin${item.value > 1 ? 's' : ''}!`,
+                            options: [
+                                { text: "You're welcome!", responseIndex: -1 }
+                            ]
+                        };
+                        
+                        gameEngine.dialogManager.showCustomDialog(targetObj, customDialog);
+                    }
+                } else {
+                    // Can't use coin on this object
+                    if (gameEngine && gameEngine.uiManager) {
+                        gameEngine.uiManager.showNotification(`Can't use coin on this object`, 'info');
+                    }
+                }
+                break;
+                
+            default:
+                // Default behavior - just use the item
+                this.useItem(itemIndex);
+        }
+    }
+    
+    /**
+     * Update inventory counter on the toggle button
+     */
+    updateInventoryCounter() {
+        if (!this.inventoryToggle) return;
+        
+        // Set the counter
+        this.inventoryToggle.setAttribute('data-count', this.items.length.toString());
+    }
+    
+    /**
      * Refresh inventory UI
      */
     refreshInventoryUI() {
@@ -245,24 +525,35 @@ class InventoryManager {
             const itemElement = document.createElement('div');
             itemElement.className = `inventory-item ${item.type}`;
             itemElement.dataset.index = index;
+            itemElement.title = `${item.name}: ${item.description}`;
+            
+            // Make draggable
+            itemElement.draggable = true;
+            itemElement.addEventListener('dragstart', this.handleDragStart);
+            itemElement.addEventListener('dragend', this.handleDragEnd);
             
             // Set content based on item type
+            let iconContent = '▪';
+            
             switch (item.type) {
                 case 'coin':
-                    itemElement.innerHTML = `<span class="coin-icon">●</span>`;
+                    iconContent = '●';
                     break;
                     
                 case 'key':
-                    itemElement.innerHTML = `<span class="key-icon">⚿</span>`;
+                    iconContent = '⚿';
+                    break;
+                    
+                case 'potion':
+                    iconContent = '⚗';
                     break;
                     
                 case 'special':
-                    itemElement.innerHTML = `<span class="special-icon">★</span>`;
+                    iconContent = '★';
                     break;
-                    
-                default:
-                    itemElement.innerHTML = `<span class="item-icon">▪</span>`;
             }
+            
+            itemElement.innerHTML = `<span class="item-icon">${iconContent}</span>`;
             
             // Show value if greater than 1
             if (item.value > 1) {
@@ -272,19 +563,8 @@ class InventoryManager {
                 itemElement.appendChild(valueElement);
             }
             
-            // Add click handler
+            // Add click handler for using item
             itemElement.addEventListener('click', this.handleItemUse);
-            
-            // Add drag functionality
-            itemElement.draggable = true;
-            itemElement.addEventListener('dragstart', (event) => {
-                event.dataTransfer.setData('text/plain', index);
-                itemElement.classList.add('dragging');
-            });
-            
-            itemElement.addEventListener('dragend', () => {
-                itemElement.classList.remove('dragging');
-            });
             
             // Add to inventory UI
             this.inventoryItems.appendChild(itemElement);
@@ -322,6 +602,13 @@ class InventoryManager {
     }
     
     /**
+     * Helper to capitalize the first letter of a string
+     */
+    capitalizeFirstLetter(string) {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+    
+    /**
      * Serialize inventory for saving
      */
     serialize() {
@@ -337,6 +624,7 @@ class InventoryManager {
         if (data && data.items) {
             this.items = data.items;
             this.refreshInventoryUI();
+            this.updateInventoryCounter();
         }
     }
 }
