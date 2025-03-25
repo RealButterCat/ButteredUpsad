@@ -14,6 +14,12 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
+    transition: background-color 0.3s ease-in-out;
+}
+
+/* Game Mode Body Styles */
+body.game-mode {
+    background-color: #ecf0f1;
 }
 
 .container {
@@ -30,6 +36,7 @@ header {
     position: sticky;
     top: 0;
     z-index: 10;
+    transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
 
 nav {
@@ -42,6 +49,12 @@ nav {
 .logo {
     font-size: 1.5rem;
     font-weight: bold;
+    transition: transform 0.3s ease-in-out;
+}
+
+.game-mode .logo {
+    color: #e74c3c;
+    transform: scale(1.05);
 }
 
 .nav-links {
@@ -56,13 +69,16 @@ nav {
 .nav-links a {
     color: #fff;
     text-decoration: none;
-    transition: color 0.3s;
+    transition: color 0.3s, transform 0.2s;
+    display: inline-block;
 }
 
 .nav-links a:hover {
     color: #3498db;
+    transform: translateY(-2px);
 }
 
+/* Start Game Button */
 #start-game {
     background-color: #e74c3c;
     color: white;
@@ -70,40 +86,97 @@ nav {
     padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
 }
 
 #start-game:hover {
     background-color: #c0392b;
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#start-game:disabled {
+    background-color: #95a5a6;
+    transform: none;
+    box-shadow: none;
+    cursor: default;
+}
+
+/* Add ripple effect */
+#start-game::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+
+#start-game:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(20, 20);
+        opacity: 0;
+    }
 }
 
 /* Main Content */
 main {
     flex: 1;
     padding: 2rem 0;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
 .page-section {
     display: none;
     padding: 2rem 0;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
 .page-section.active {
     display: block;
 }
 
+/* Website Content Transition */
+.website-content {
+    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+}
+
+.website-content.hidden {
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+}
+
 h1 {
     margin-bottom: 1.5rem;
     color: #2c3e50;
+    transition: color 0.3s;
 }
 
 h2 {
     margin-bottom: 1rem;
     color: #34495e;
+    transition: color 0.3s;
 }
 
 p {
     margin-bottom: 1rem;
+    transition: color 0.3s;
 }
 
 /* Game Tips Section */
@@ -113,6 +186,7 @@ p {
     background-color: #f2f9fe;
     border-left: 4px solid #3498db;
     border-radius: 4px;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 
 .game-tips h3 {
@@ -146,6 +220,7 @@ kbd {
     margin-bottom: 2rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid #eee;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 
 .post-meta {
@@ -157,6 +232,7 @@ kbd {
 /* Contact Form */
 form {
     max-width: 600px;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 
 .form-group {
@@ -176,6 +252,12 @@ input, textarea {
     border-radius: 4px;
     font-family: inherit;
     font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+input:focus, textarea:focus {
+    border-color: #3498db;
+    outline: none;
 }
 
 button[type="submit"] {
@@ -185,11 +267,12 @@ button[type="submit"] {
     padding: 10px 15px;
     border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, transform 0.2s;
 }
 
 button[type="submit"]:hover {
     background-color: #2980b9;
+    transform: translateY(-2px);
 }
 
 /* Footer */
@@ -198,9 +281,82 @@ footer {
     color: #fff;
     padding: 1.5rem 0;
     text-align: center;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
 /* Utility Classes */
 .hidden {
     display: none !important;
+}
+
+/* Game Loading Animation */
+.save-indicator {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    background-color: rgba(44, 62, 80, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    z-index: 1000;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s, transform 0.3s;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.save-indicator.saving {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Hero Section Enhancement */
+.hero-section {
+    position: relative;
+    padding: 4rem 0;
+    background-color: #f5f7fa;
+    text-align: center;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
+.hero-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #3498db, #8e44ad);
+    opacity: 0.1;
+    z-index: -1;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.hero-title {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.hero-description {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    color: #34495e;
+}
+
+.game-mode .hero-bg {
+    opacity: 0.2;
+    animation: pulse-bg 6s infinite alternate;
+}
+
+@keyframes pulse-bg {
+    0% { opacity: 0.05; }
+    100% { opacity: 0.2; }
 }
