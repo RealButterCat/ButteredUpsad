@@ -25,6 +25,10 @@ class Player {
         this.experience = 0;
         this.nextLevelXP = 100;
         
+        // Movement trail effect
+        this.trailTimer = 0;
+        this.trailInterval = 0.1; // Time between trail particles in seconds
+        
         // DOM element
         this.element = document.getElementById('player');
         if (this.element) {
@@ -123,8 +127,63 @@ class Player {
         // Keep player within bounds
         this.enforceBoundaries();
         
-        // Update DOM element position
+        // Update DOM element position and appearance
         this.updateElementPosition();
+        this.updateElementAppearance(speed);
+        
+        // Create movement trail when moving fast
+        this.updateMovementTrail(deltaTime, speed);
+    }
+    
+    /**
+     * Update the player's visual appearance based on speed
+     */
+    updateElementAppearance(speed) {
+        if (!this.element) return;
+        
+        // Remove existing movement classes
+        this.element.classList.remove('moving-fast', 'moving-slow');
+        
+        // Add class based on current speed
+        if (speed > this.maxSpeed * 0.7) {
+            this.element.classList.add('moving-fast');
+        } else if (speed > this.maxSpeed * 0.3) {
+            this.element.classList.add('moving-slow');
+        }
+    }
+    
+    /**
+     * Create and update movement trail particles
+     */
+    updateMovementTrail(deltaTime, speed) {
+        // Only create trail particles when moving fast enough
+        if (speed < this.maxSpeed * 0.5) return;
+        
+        // Update timer
+        this.trailTimer += deltaTime;
+        
+        // Create new trail particle at interval
+        if (this.trailTimer >= this.trailInterval) {
+            this.trailTimer = 0;
+            
+            if (gameEngine && gameEngine.gameContainer) {
+                // Create trail particle DOM element
+                const trail = document.createElement('div');
+                trail.className = 'movement-trail';
+                trail.style.left = `${this.x + this.width/2 - 5}px`;
+                trail.style.top = `${this.y + this.height/2 - 5}px`;
+                
+                // Add to game container
+                gameEngine.gameContainer.appendChild(trail);
+                
+                // Remove after animation is done
+                setTimeout(() => {
+                    if (trail.parentNode) {
+                        trail.parentNode.removeChild(trail);
+                    }
+                }, 600);
+            }
+        }
     }
     
     /**
