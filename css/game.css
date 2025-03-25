@@ -112,7 +112,20 @@
     transition: transform 0.2s;
 }
 
-.interactable:hover {
+/* Disable hover scale effect for header, footer, and blog posts */
+header .interactable:hover,
+footer .interactable:hover,
+.blog-post.interactable:hover,
+.blog-post .interactable:hover,
+header.interactable:hover,
+footer.interactable:hover,
+nav.interactable:hover,
+nav .interactable:hover {
+    transform: none !important;
+}
+
+/* Regular interactable hover effect */
+.interactable:hover:not(header, footer, .blog-post, nav):not(.blog-post *):not(header *):not(footer *):not(nav *) {
     transform: scale(1.05);
 }
 
