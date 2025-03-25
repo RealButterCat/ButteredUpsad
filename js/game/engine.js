@@ -20,6 +20,7 @@ class GameEngine {
         this.inventoryManager = null;
         this.dialogManager = null;
         this.questManager = null;
+        this.reactivityManager = null;
         
         // Initialize game container
         this.initializeCanvas();
@@ -52,6 +53,9 @@ class GameEngine {
         this.inventoryManager = new InventoryManager();
         this.dialogManager = new DialogManager();
         this.questManager = new QuestManager(this);
+        
+        // Create world reactivity system (must be after other systems are initialized)
+        this.reactivityManager = new WorldReactivity(this);
         
         // Load saved game state if exists
         this.loadGameState();
@@ -187,6 +191,11 @@ class GameEngine {
         
         localStorage.setItem('butteredUpsad_gameState', JSON.stringify(gameState));
         console.log('Game state saved!');
+        
+        // Also save reactivity state if available
+        if (this.reactivityManager) {
+            this.reactivityManager.saveState();
+        }
     }
     
     /**
@@ -224,6 +233,8 @@ class GameEngine {
                 console.error('Error loading game state:', error);
             }
         }
+        
+        // Reactivity state is loaded automatically by the reactivity manager when initialized
     }
     
     /**
@@ -233,7 +244,13 @@ class GameEngine {
         localStorage.removeItem('butteredUpsad_gameState');
         localStorage.removeItem('butteredUpsad_destroyedObjects');
         localStorage.removeItem('butteredUpsad_questState');
+        localStorage.removeItem('butteredUpsad_reactivityState');
         console.log('Game state reset!');
+        
+        // Reset reactivity state if available
+        if (this.reactivityManager) {
+            this.reactivityManager.resetAll();
+        }
         
         // Reload the page to start fresh
         window.location.reload();
