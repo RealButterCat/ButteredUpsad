@@ -30,7 +30,7 @@
 .game-object {
     position: absolute;
     z-index: 6;
-    transition: transform 0.5s ease-out;
+    transition: transform 0.5s ease-out, left 0.2s ease-out, top 0.2s ease-out;
 }
 
 /* Player Character */
@@ -90,6 +90,26 @@
 
 .npc:hover {
     border-bottom-color: #2980b9;
+}
+
+/* Movable objects */
+.movable {
+    cursor: grab;
+    transition: transform 0.2s, left 0.2s ease-out, top 0.2s ease-out, box-shadow 0.2s;
+}
+
+.movable:hover {
+    box-shadow: 0 0 8px rgba(52, 152, 219, 0.7);
+}
+
+.movable-block {
+    background-color: #3498db;
+    border: 2px dashed #2980b9;
+}
+
+/* Ghost objects (ignore collision) */
+.ghost {
+    opacity: 0.8;
 }
 
 /* Interactable DOM Elements */
@@ -252,6 +272,16 @@
 
 .shake {
     animation: shake 0.2s ease-in-out;
+}
+
+/* Physics animation for object collision */
+@keyframes bump {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.bump {
+    animation: bump 0.2s ease-in-out;
 }
 
 /* Movement trail effect (optional) */
