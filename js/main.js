@@ -15,8 +15,97 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize keyboard controls helper
     window.keyboardControls = new KeyboardControls();
     
+    // Preload critical assets in the background
+    preloadGameAssets();
+    
     console.log('ButteredUpsad loaded successfully!');
 });
+
+/**
+ * Preload critical game assets
+ */
+function preloadGameAssets() {
+    console.log('Preloading game assets...');
+    
+    // Create preload container (invisible)
+    const preloadContainer = document.createElement('div');
+    preloadContainer.style.position = 'absolute';
+    preloadContainer.style.opacity = '0';
+    preloadContainer.style.pointerEvents = 'none';
+    preloadContainer.style.width = '0';
+    preloadContainer.style.height = '0';
+    preloadContainer.style.overflow = 'hidden';
+    document.body.appendChild(preloadContainer);
+    
+    // List of assets to preload
+    const assetsToPreload = [
+        // Create a mini player character to preload its rendering
+        createPreloadElement('div', { 
+            className: 'game-object', 
+            style: { 
+                backgroundColor: '#e74c3c',
+                borderRadius: '50%',
+                width: '10px',
+                height: '10px'
+            }
+        }),
+        
+        // Create a mini NPC triangle
+        createPreloadElement('div', { 
+            className: 'npc', 
+            style: { 
+                width: '0',
+                height: '0',
+                borderLeft: '5px solid transparent',
+                borderRight: '5px solid transparent',
+                borderBottom: '10px solid #3498db'
+            }
+        }),
+        
+        // Create a mini collectible
+        createPreloadElement('div', { 
+            className: 'collectible', 
+            style: { 
+                backgroundColor: '#f1c40f',
+                borderRadius: '50%',
+                width: '10px',
+                height: '10px'
+            }
+        })
+    ];
+    
+    // Add preloaded elements to container
+    assetsToPreload.forEach(el => {
+        preloadContainer.appendChild(el);
+    });
+    
+    // Clean up preloaded elements after 2 seconds
+    setTimeout(() => {
+        if (preloadContainer.parentNode) {
+            preloadContainer.parentNode.removeChild(preloadContainer);
+        }
+        console.log('Preloading complete');
+    }, 2000);
+}
+
+/**
+ * Create a preload element with specified attributes
+ */
+function createPreloadElement(tagName, attrs = {}) {
+    const el = document.createElement(tagName);
+    
+    if (attrs.className) {
+        el.className = attrs.className;
+    }
+    
+    if (attrs.style) {
+        Object.keys(attrs.style).forEach(prop => {
+            el.style[prop] = attrs.style[prop];
+        });
+    }
+    
+    return el;
+}
 
 /**
  * Initialize the game
@@ -30,7 +119,37 @@ function initGame() {
     
     if (startGameButton) {
         startGameButton.addEventListener('click', () => {
-            toggleGame();
+            // Disable button to prevent multiple clicks
+            startGameButton.disabled = true;
+            startGameButton.textContent = 'Loading...';
+            
+            // Show subtle loading indicator
+            const loadingIndicator = createLoadingIndicator();
+            document.body.appendChild(loadingIndicator);
+            
+            // Short delay to allow for visual transition
+            setTimeout(() => {
+                loadingIndicator.classList.add('visible');
+            }, 50);
+            
+            // Start game with a short delay for transition
+            setTimeout(() => {
+                startGame();
+                
+                // Remove loading indicator
+                setTimeout(() => {
+                    loadingIndicator.classList.remove('visible');
+                    setTimeout(() => {
+                        if (loadingIndicator.parentNode) {
+                            loadingIndicator.parentNode.removeChild(loadingIndicator);
+                        }
+                    }, 300);
+                }, 500);
+                
+                // Update button text
+                startGameButton.textContent = 'Stop Game';
+                startGameButton.disabled = false;
+            }, 800);
         });
     }
     
@@ -60,6 +179,114 @@ function initGame() {
 }
 
 /**
+ * Create a loading indicator element
+ */
+function createLoadingIndicator() {
+    const container = document.createElement('div');
+    container.className = 'game-loading';
+    
+    const spinner = document.createElement('div');
+    spinner.className = 'loading-spinner';
+    container.appendChild(spinner);
+    
+    const text = document.createElement('div');
+    text.textContent = 'Initializing adventure...';
+    container.appendChild(text);
+    
+    return container;
+}
+
+/**
+ * Start the game with smooth transitions
+ */
+function startGame() {
+    if (!gameEngine || gameEngine.isRunning) return;
+    
+    // Hide non-RPG elements
+    hideWebsiteContent();
+    
+    // Start the game engine
+    gameEngine.start();
+    
+    // Spawn default objects if no saved state exists
+    if (!localStorage.getItem('butteredUpsad_gameState')) {
+        generateDefaultWorld();
+    }
+    
+    // Show keyboard controls helper
+    if (window.keyboardControls) {
+        window.keyboardControls.show();
+    }
+    
+    console.log('Game started');
+}
+
+/**
+ * Hide regular website content
+ */
+function hideWebsiteContent() {
+    // Add hidden class to main content sections
+    document.querySelectorAll('main section, footer').forEach(el => {
+        el.classList.add('website-content');
+        el.classList.add('hidden');
+    });
+    
+    // Add game-mode class to body
+    document.body.classList.add('game-mode');
+}
+
+/**
+ * Show regular website content
+ */
+function showWebsiteContent() {
+    // Remove hidden class from main content sections
+    document.querySelectorAll('.website-content').forEach(el => {
+        el.classList.remove('hidden');
+    });
+    
+    // Remove game-mode class from body
+    document.body.classList.remove('game-mode');
+}
+
+/**
+ * Generate default world with basic objects
+ */
+function generateDefaultWorld() {
+    if (!gameEngine || !gameEngine.objectManager) return;
+    
+    console.log('Generating default world...');
+    
+    // Clear any existing objects
+    gameEngine.objectManager.clearAllObjects();
+    
+    // Add 20 random destructible blocks
+    for (let i = 0; i < 20; i++) {
+        const x = Math.random() * (window.innerWidth - 50);
+        const y = Math.random() * (window.innerHeight - 200) + 100; // Keep away from top nav
+        const width = 30 + Math.random() * 40;
+        const height = 30 + Math.random() * 40;
+        
+        const block = new WallObject(x, y, width, height);
+        gameEngine.objectManager.addObject(block);
+    }
+    
+    // Add an NPC in the bottom-right corner
+    const npcX = window.innerWidth - 100;
+    const npcY = window.innerHeight - 100;
+    const npc = new NPCObject(npcX, npcY, 'Guide');
+    gameEngine.objectManager.addObject(npc);
+    
+    // Add a "secret" interactable element
+    const secretX = 100 + Math.random() * (window.innerWidth - 200);
+    const secretY = 100 + Math.random() * (window.innerHeight - 200);
+    const secretObj = new CollectibleObject(secretX, secretY, 'special');
+    secretObj.value = 5;
+    gameEngine.objectManager.addObject(secretObj);
+    
+    console.log('Default world generated!');
+}
+
+/**
  * Toggle game state (start/stop)
  */
 function toggleGame() {
@@ -73,6 +300,7 @@ function toggleGame() {
         
         if (startGameButton) {
             startGameButton.textContent = 'Start Game';
+            startGameButton.disabled = false;
         }
         
         // Hide keyboard controls helper
@@ -80,26 +308,22 @@ function toggleGame() {
             window.keyboardControls.hide();
         }
         
+        // Show website content
+        showWebsiteContent();
+        
         console.log('Game stopped');
     } else {
-        // Start the game
-        gameEngine.start();
-        
-        // Spawn some initial objects
-        if (gameEngine.objectManager) {
-            gameEngine.objectManager.spawnRandomObjects(15);
+        if (startGameButton) {
+            startGameButton.disabled = true;
         }
+        
+        // Start game with transitions
+        startGame();
         
         if (startGameButton) {
             startGameButton.textContent = 'Stop Game';
+            startGameButton.disabled = false;
         }
-        
-        // Show keyboard controls helper
-        if (window.keyboardControls) {
-            window.keyboardControls.show();
-        }
-        
-        console.log('Game started');
     }
 }
 
@@ -139,6 +363,21 @@ function addDebugReset() {
             resetButton.style.display = resetButton.style.display === 'none' ? 'block' : 'none';
         }
     });
+}
+
+/**
+ * Check if localStorage is available
+ */
+function isLocalStorageAvailable() {
+    try {
+        const test = 'test';
+        localStorage.setItem(test, test);
+        localStorage.removeItem(test);
+        return true;
+    } catch (e) {
+        console.warn('localStorage not available. Falling back to sessionStorage.');
+        return false;
+    }
 }
 
 /**
@@ -221,12 +460,10 @@ const injectGameStyles = () => {
             transition: opacity 0.3s ease-out;
         }
         
-        #game-container.hidden {
-            opacity: 0;
-        }
-        
-        #game-container.active {
-            opacity: 1;
+        /* Game Mode styles */
+        .game-mode header {
+            background-color: rgba(44, 62, 80, 0.9);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
         
         /* Improved hover states for interactable elements */
