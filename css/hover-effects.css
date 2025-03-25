@@ -1,60 +1,68 @@
 /* 
- * Immediate Hover Effects
- * These styles are applied as soon as the page loads, 
- * independent of game state or initialization.
+ * Immediate-Loading Hover Effects
+ * This file contains hover effects that are applied on page load
+ * regardless of game state.
  */
 
-/* Default hover behavior for interactive elements */
-.interactable:hover {
+/* Basic hover definitions for interactable elements */
+.interactable {
+    cursor: pointer;
+    transition: transform 0.2s, color 0.3s;
+}
+
+/* Default hover effect for general interactive elements */
+.interactable:not(h1):not(h2):not(header *):not(footer *):not(.blog-post):not(.blog-post *):not(#blog *):not(#contact *):not(form *):hover {
     transform: scale(1.05);
-    transition: transform 0.2s ease, color 0.2s ease;
 }
 
-/* Element-specific hover behaviors */
-h1.interactable:hover, 
-h2.interactable:hover,
-.blog-post h1:hover,
-.blog-post h2:hover {
-    /* Headings should not scale but can change color */
-    transform: none !important;
-    color: #3498db !important;
-}
-
-/* Explicit protection for specific sections */
-header, header *,
-footer, footer *,
-.blog-post, .blog-post *,
-#blog .interactable, 
-#blog h1, #blog h2, #blog p,
-#contact, #contact *,
-form, form * {
-    /* These elements should never transform on hover */
-    transform: none !important;
-}
-
-/* Navigation links hover behavior */
+/* Specific hover behavior for navigation elements */
+nav a:hover, 
 .nav-links a:hover {
     color: #3498db !important;
     transform: translateY(-2px) !important;
 }
 
-/* Override for Start Game button to maintain its hover effect */
-#start-game:hover,
-#hero-start-game:hover {
-    background-color: #c0392b !important;
-    transform: scale(1.05) !important;
+/* Special hover effect for headings - subtle color change instead of scaling */
+h1.interactable:hover, 
+h2.interactable:hover,
+.interactable h1:hover,
+.interactable h2:hover {
+    transform: none !important;
+    color: #3498db !important;
 }
 
-/* Game UI elements protection */
-#game-container, #game-container *,
-#inventory-panel, #inventory-panel *,
-#dialog-box, #dialog-box *,
-#game-mode-indicator,
-#keyboard-controls,
-#keyboard-controls-panel,
-.game-notification,
-.game-tooltip,
-.save-indicator {
-    /* Game UI should not transform on hover */
+/* Explicit protection for blog elements */
+.blog-post:hover,
+.blog-post *:hover,
+#blog .interactable:hover, 
+#blog h1:hover, 
+#blog h2:hover, 
+#blog p:hover,
+#blog a:hover,
+#blog button:hover {
     transform: none !important;
+}
+
+/* Protection for contact section */
+#contact *:hover,
+form *:hover {
+    transform: none !important;
+}
+
+/* Protection for header and footer */
+header *:hover,
+footer *:hover {
+    transform: none !important;
+}
+
+/* Special handling for buttons */
+button.interactable:not(#start-game):not(header *):not(footer *):not(.blog-post *):not(#contact *):not(form *):hover {
+    transform: scale(1.05);
+}
+
+/* Preserve specific hover behavior for start button */
+#start-game:hover,
+#hero-start-game:hover {
+    background-color: #c0392b;
+    transform: scale(1.05);
 }
