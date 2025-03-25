@@ -1,0 +1,62 @@
+/* 
+ * Dedicated hover effects stylesheet
+ * Applied immediately on page load independent of game state
+ */
+
+/* Primary hover effect for standard interactive elements */
+.interactable:hover,
+main a:hover,
+.interactable.active:hover {
+    transform: scale(1.05);
+}
+
+/* Navigation-specific hover effects */
+nav .nav-links a:hover {
+    color: #3498db !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Disable hover effects for specific sections */
+header, 
+header *,
+footer, 
+footer *,
+#blog, 
+#blog *,
+.blog-post, 
+.blog-post *,
+#contact, 
+#contact *,
+form, 
+form * {
+    transform: none !important;
+}
+
+/* Heading-specific hover behavior */
+h1:hover, 
+h2:hover {
+    /* Disable scale transform */
+    transform: none !important;
+    /* Apply subtle color change instead */
+    color: #3498db;
+}
+
+/* Game UI elements protection */
+#game-container,
+#game-container *,
+#inventory-panel,
+#dialog-box,
+#game-mode-indicator,
+#keyboard-controls,
+#keyboard-controls-panel,
+.game-notification,
+.game-tooltip,
+.save-indicator {
+    transform: none !important;
+}
+
+/* Button hover states that should be preserved */
+#start-game:hover,
+.hero-cta:hover {
+    transform: scale(1.05) !important;
+}
