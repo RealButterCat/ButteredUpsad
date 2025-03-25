@@ -330,6 +330,11 @@ class NPCObject extends GameObject {
             this.isMoving = false;
             this.moveDirectionX = 0;
             this.moveDirectionY = 0;
+            
+            // Update visual state
+            if (this.element) {
+                this.element.classList.remove('wandering');
+            }
             return;
         }
         
@@ -349,6 +354,17 @@ class NPCObject extends GameObject {
         if (length > 0) {
             this.moveDirectionX /= length;
             this.moveDirectionY /= length;
+        }
+        
+        // Add visual feedback for direction change
+        if (this.element) {
+            this.element.classList.add('wandering');
+            this.element.classList.add('direction-change');
+            setTimeout(() => {
+                if (this.element) {
+                    this.element.classList.remove('direction-change');
+                }
+            }, 500);
         }
     }
     
@@ -440,6 +456,19 @@ class NPCObject extends GameObject {
      */
     setTalking(isTalking) {
         this.isTalking = isTalking;
+        
+        // Update visual state
+        if (this.element) {
+            if (isTalking) {
+                this.element.classList.add('talking');
+                this.element.classList.remove('wandering');
+            } else {
+                this.element.classList.remove('talking');
+                if (this.isMoving) {
+                    this.element.classList.add('wandering');
+                }
+            }
+        }
     }
     
     getDialog(index) {
@@ -584,6 +613,19 @@ class GameObjectManager {
         // Add class for solid objects
         if (object.solid) {
             element.classList.add('solid');
+        }
+        
+        // NPC-specific classes
+        if (object.type === 'npc') {
+            // Add wandering class if NPC is moving
+            if (object instanceof NPCObject && object.isMoving && !object.isTalking) {
+                element.classList.add('wandering');
+            }
+            
+            // Add talking class if NPC is in conversation
+            if (object instanceof NPCObject && object.isTalking) {
+                element.classList.add('talking');
+            }
         }
         
         // Set initial damage visual if needed
