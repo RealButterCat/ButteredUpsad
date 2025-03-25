@@ -6,7 +6,7 @@
 class InventoryManager {
     constructor() {
         this.items = [];
-        this.maxItems = 12; // Maximum number of items in inventory
+        this.maxItems = 12; // Maximum number of items in inventory (but no actual limit imposed)
         this.inventoryPanel = document.getElementById('inventory-panel');
         this.inventoryItems = document.getElementById('inventory-items');
         
@@ -14,6 +14,10 @@ class InventoryManager {
         this.handleCollectItem = this.handleCollectItem.bind(this);
         this.handleItemUse = this.handleItemUse.bind(this);
         this.toggleInventoryPanel = this.toggleInventoryPanel.bind(this);
+        this.handleKeyPress = this.handleKeyPress.bind(this);
+        this.handleDragStart = this.handleDragStart.bind(this);
+        this.handleDragEnd = this.handleDragEnd.bind(this);
+        this.handleDrop = this.handleDrop.bind(this);
         
         // Set up event listeners
         document.addEventListener('collect-item', (event) => {
@@ -22,18 +26,7 @@ class InventoryManager {
             }
         });
         
-        // Toggle inventory panel on hover near right edge
-        document.addEventListener('mousemove', (event) => {
-            const edgeThreshold = 50;
-            
-            if (this.inventoryPanel && event.clientX > window.innerWidth - edgeThreshold) {
-                this.showInventoryPanel();
-            } else if (this.inventoryPanel && 
-                     this.inventoryPanel.classList.contains('visible') && 
-                     event.clientX < window.innerWidth - 250) {
-                this.hideInventoryPanel();
-            }
-        });
+        document.addEventListener('keydown', this.handleKeyPress);
         
         // Initialize
         this.initialize();
@@ -45,15 +38,40 @@ class InventoryManager {
     initialize() {
         console.log('Initializing inventory manager');
         
+        // Update the inventory panel appearance
         if (this.inventoryPanel) {
-            // Create inventory panel toggle button
-            const toggleButton = document.createElement('button');
-            toggleButton.id = 'inventory-toggle';
-            toggleButton.textContent = 'I';
-            toggleButton.className = 'inventory-toggle';
-            toggleButton.addEventListener('click', this.toggleInventoryPanel);
+            // Position the panel on the left side of the screen
+            this.inventoryPanel.style.left = '0';
+            this.inventoryPanel.style.right = 'auto';
+            this.inventoryPanel.style.transform = 'translateX(-100%)';
+            this.inventoryPanel.style.transition = 'transform 0.3s ease-out';
             
-            document.body.appendChild(toggleButton);
+            // Add a label to indicate the Tab key toggle
+            const tabHint = document.createElement('div');
+            tabHint.className = 'tab-hint';
+            tabHint.textContent = 'Press Tab to toggle';
+            this.inventoryPanel.appendChild(tabHint);
+        }
+        
+        // Set up drop zone for the entire game container
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) {
+            gameContainer.addEventListener('dragover', (e) => {
+                e.preventDefault(); // Allow drop
+            });
+            
+            gameContainer.addEventListener('drop', this.handleDrop);
+        }
+    }
+    
+    /**
+     * Handle Tab key to toggle inventory
+     */
+    handleKeyPress(event) {
+        // Toggle inventory with Tab key
+        if (event.key === 'Tab') {
+            event.preventDefault(); // Prevent default Tab behavior
+            this.toggleInventoryPanel();
         }
     }
     
@@ -63,8 +81,12 @@ class InventoryManager {
     toggleInventoryPanel() {
         if (!this.inventoryPanel) return;
         
-        this.inventoryPanel.classList.toggle('hidden');
-        this.inventoryPanel.classList.toggle('visible');
+        // Toggle the transform to slide in/out
+        if (this.inventoryPanel.style.transform === 'translateX(0px)') {
+            this.inventoryPanel.style.transform = 'translateX(-100%)';
+        } else {
+            this.inventoryPanel.style.transform = 'translateX(0)';
+        }
     }
     
     /**
@@ -73,8 +95,7 @@ class InventoryManager {
     showInventoryPanel() {
         if (!this.inventoryPanel) return;
         
-        this.inventoryPanel.classList.remove('hidden');
-        this.inventoryPanel.classList.add('visible');
+        this.inventoryPanel.style.transform = 'translateX(0)';
     }
     
     /**
@@ -83,28 +104,39 @@ class InventoryManager {
     hideInventoryPanel() {
         if (!this.inventoryPanel) return;
         
-        this.inventoryPanel.classList.remove('visible');
-        this.inventoryPanel.classList.add('hidden');
+        this.inventoryPanel.style.transform = 'translateX(-100%)';
     }
     
     /**
      * Add item to inventory
      */
     addItem(item) {
-        // Check if inventory is full
-        if (this.items.length >= this.maxItems) {
-            console.log('Inventory is full!');
-            return false;
-        }
-        
-        // Add item to inventory
+        // Add item to inventory (no limit imposed)
         this.items.push(item);
         
         // Update UI
         this.refreshInventoryUI();
         
+        // Track stat for item collected
+        this.incrementStat('itemsCollected');
+        
         console.log(`Added ${item.type} to inventory`);
         return true;
+    }
+    
+    /**
+     * Increment a player stat
+     */
+    incrementStat(statName, amount = 1) {
+        if (!gameEngine || !gameEngine.playerStats) return;
+        
+        if (gameEngine.playerStats[statName] !== undefined) {
+            gameEngine.playerStats[statName] += amount;
+            console.log(`${statName}: ${gameEngine.playerStats[statName]}`);
+        } else {
+            gameEngine.playerStats[statName] = amount;
+            console.log(`${statName}: ${amount}`);
+        }
     }
     
     /**
@@ -140,11 +172,12 @@ class InventoryManager {
             switch (item.type) {
                 case 'coin':
                     // Coins just add to score, not consumed
+                    this.incrementStat('coinsUsed');
                     break;
                     
                 case 'key':
                     // Keys can be used to unlock things
-                    // For now, just consume the item
+                    this.incrementStat('keysUsed');
                     consumed = true;
                     break;
                     
@@ -155,11 +188,13 @@ class InventoryManager {
                     setTimeout(() => {
                         document.body.classList.remove('special-effect');
                     }, 2000);
+                    this.incrementStat('specialItemsUsed');
                     consumed = true;
                     break;
                     
                 default:
                     // By default, items are consumed when used
+                    this.incrementStat('itemsUsed');
                     consumed = true;
             }
             
@@ -220,6 +255,109 @@ class InventoryManager {
     }
     
     /**
+     * Handle drag start for inventory items
+     */
+    handleDragStart(event) {
+        const itemElement = event.currentTarget;
+        const index = parseInt(itemElement.dataset.index, 10);
+        
+        if (!isNaN(index)) {
+            // Store the item index in the drag data
+            event.dataTransfer.setData('application/json', JSON.stringify({
+                type: 'inventory-item',
+                index: index,
+                itemType: this.items[index].type,
+                itemValue: this.items[index].value
+            }));
+            
+            // Add dragging class for visual feedback
+            itemElement.classList.add('dragging');
+            
+            // Set the drag image
+            const dragImage = itemElement.cloneNode(true);
+            dragImage.style.width = '40px';
+            dragImage.style.height = '40px';
+            document.body.appendChild(dragImage);
+            event.dataTransfer.setDragImage(dragImage, 20, 20);
+            
+            // Remove the clone after drag starts
+            setTimeout(() => {
+                if (dragImage.parentNode) {
+                    dragImage.parentNode.removeChild(dragImage);
+                }
+            }, 0);
+        }
+    }
+    
+    /**
+     * Handle drag end for inventory items
+     */
+    handleDragEnd(event) {
+        event.currentTarget.classList.remove('dragging');
+    }
+    
+    /**
+     * Handle drop of inventory items into the world
+     */
+    handleDrop(event) {
+        event.preventDefault();
+        
+        // Get the drop data
+        const jsonData = event.dataTransfer.getData('application/json');
+        if (!jsonData) return;
+        
+        try {
+            const data = JSON.parse(jsonData);
+            
+            if (data.type === 'inventory-item') {
+                // Remove the item from inventory
+                const item = this.removeItem(data.index);
+                
+                if (item) {
+                    // Create the item in the world at the drop position
+                    if (gameEngine && gameEngine.objectManager) {
+                        const x = event.clientX;
+                        const y = event.clientY;
+                        
+                        // Create appropriate object based on item type
+                        let newObject;
+                        
+                        switch (item.type) {
+                            case 'coin':
+                                newObject = new CollectibleObject(x, y, 'coin');
+                                newObject.value = item.value;
+                                break;
+                                
+                            case 'key':
+                                newObject = new CollectibleObject(x, y, 'key');
+                                break;
+                                
+                            case 'special':
+                                newObject = new CollectibleObject(x, y, 'special');
+                                newObject.value = item.value;
+                                break;
+                                
+                            default:
+                                newObject = new CollectibleObject(x, y, item.type);
+                                break;
+                        }
+                        
+                        // Add the object to the world
+                        gameEngine.objectManager.addObject(newObject);
+                        
+                        // Track stat for items dropped in world
+                        this.incrementStat('itemsDropped');
+                        
+                        console.log(`Dropped ${item.type} into the world at (${x}, ${y})`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error processing dropped item:', e);
+        }
+    }.bind(this)
+    
+    /**
      * Handle item use from inventory UI
      */
     handleItemUse(event) {
@@ -272,25 +410,19 @@ class InventoryManager {
                 itemElement.appendChild(valueElement);
             }
             
-            // Add click handler
-            itemElement.addEventListener('click', this.handleItemUse);
+            // Add click handler for using items
+            itemElement.addEventListener('click', this.handleItemUse.bind(this));
             
             // Add drag functionality
             itemElement.draggable = true;
-            itemElement.addEventListener('dragstart', (event) => {
-                event.dataTransfer.setData('text/plain', index);
-                itemElement.classList.add('dragging');
-            });
-            
-            itemElement.addEventListener('dragend', () => {
-                itemElement.classList.remove('dragging');
-            });
+            itemElement.addEventListener('dragstart', this.handleDragStart);
+            itemElement.addEventListener('dragend', this.handleDragEnd);
             
             // Add to inventory UI
             this.inventoryItems.appendChild(itemElement);
         });
         
-        // Add empty slots to fill up to max
+        // Add empty slots for visual reference (but not enforcing a limit)
         for (let i = this.items.length; i < this.maxItems; i++) {
             const emptySlot = document.createElement('div');
             emptySlot.className = 'inventory-item empty';
