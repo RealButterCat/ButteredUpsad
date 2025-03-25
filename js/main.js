@@ -13,7 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
     addDebugReset();
     
     // Initialize keyboard controls helper
-    window.keyboardControls = new KeyboardControls();
+    if (typeof KeyboardControls === 'function') {
+        window.keyboardControls = new KeyboardControls();
+    }
     
     // Preload critical assets in the background
     preloadGameAssets();
@@ -434,14 +436,23 @@ function saveGameData(key, data) {
  */
 function loadGameData(key) {
     // Try localStorage first
-    const localData = localStorage.getItem(key);
-    
-    if (localData !== null) {
-        return localData;
+    try {
+        const localData = localStorage.getItem(key);
+        
+        if (localData !== null) {
+            return localData;
+        }
+    } catch (e) {
+        console.warn('Error accessing localStorage:', e);
     }
     
     // Fall back to sessionStorage
-    return sessionStorage.getItem(key);
+    try {
+        return sessionStorage.getItem(key);
+    } catch (e) {
+        console.warn('Error accessing sessionStorage:', e);
+        return null;
+    }
 }
 
 /**
@@ -528,6 +539,18 @@ const injectGameStyles = () => {
         /* Improved hover states for interactable elements */
         .game-interactable:hover {
             cursor: pointer;
+        }
+        
+        /* Disable hover effect for specific elements */
+        header .game-interactable:hover::before,
+        footer .game-interactable:hover::before,
+        .blog-post.game-interactable:hover::before,
+        .blog-post .game-interactable:hover::before,
+        header.game-interactable:hover::before,
+        footer.game-interactable:hover::before,
+        nav.game-interactable:hover::before,
+        nav .game-interactable:hover::before {
+            display: none !important;
         }
         
         .game-mode .game-interactable:hover::before {
