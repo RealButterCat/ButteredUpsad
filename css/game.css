@@ -112,6 +112,11 @@
     transition: transform 0.2s;
 }
 
+/* Default hover behavior for all interactable elements */
+.interactable:hover {
+    transform: scale(1.05);
+}
+
 /* Disable hover scale effect for header, footer, blog posts, and contact section */
 header .interactable:hover,
 footer .interactable:hover,
@@ -126,11 +131,6 @@ nav .interactable:hover,
 form.interactable:hover,
 form .interactable:hover {
     transform: none !important;
-}
-
-/* Regular interactable hover effect */
-.interactable:hover:not(header, footer, .blog-post, nav, #contact, form):not(.blog-post *):not(header *):not(footer *):not(nav *):not(#contact *):not(form *) {
-    transform: scale(1.05);
 }
 
 /* Collectible Items */
