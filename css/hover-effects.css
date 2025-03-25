@@ -1,37 +1,44 @@
 /* 
  * Immediate-Loading Hover Effects
  * This file contains hover effects that are applied on page load
- * regardless of game state.
+ * regardless of game state or initialization
  */
 
-/* Basic hover definitions for interactable elements */
+/* Base interactable behavior - applied to elements marked as interactive */
 .interactable {
     cursor: pointer;
     transition: transform 0.2s, color 0.3s;
 }
 
-/* Default hover effect for general interactive elements */
-.interactable:not(h1):not(h2):not(header *):not(footer *):not(.blog-post):not(.blog-post *):not(#blog *):not(#contact *):not(form *):hover {
+/* Default hover effect for interactive elements */
+.interactable:hover {
     transform: scale(1.05);
 }
 
-/* Specific hover behavior for navigation elements */
-nav a:hover, 
+/* Navigation-specific hover effects with higher specificity */
+nav .nav-links a,
+.nav-links a {
+    transition: color 0.3s, transform 0.2s;
+}
+
+nav .nav-links a:hover,
 .nav-links a:hover {
     color: #3498db !important;
     transform: translateY(-2px) !important;
 }
 
-/* Special hover effect for headings - subtle color change instead of scaling */
+/* Heading-specific hover behavior - prevent transform, apply color change */
 h1.interactable:hover, 
 h2.interactable:hover,
 .interactable h1:hover,
-.interactable h2:hover {
+.interactable h2:hover,
+#blog h1:hover, 
+#blog h2:hover {
     transform: none !important;
     color: #3498db !important;
 }
 
-/* Explicit protection for blog elements */
+/* Comprehensive blog section protection with increased specificity */
 .blog-post:hover,
 .blog-post *:hover,
 #blog .interactable:hover, 
@@ -39,19 +46,44 @@ h2.interactable:hover,
 #blog h2:hover, 
 #blog p:hover,
 #blog a:hover,
-#blog button:hover {
+#blog button:hover,
+#blog div:hover,
+#blog span:hover,
+article.blog-post:hover,
+article.blog-post *:hover {
     transform: none !important;
 }
 
 /* Protection for contact section */
+#contact:hover,
 #contact *:hover,
+form:hover,
 form *:hover {
     transform: none !important;
 }
 
 /* Protection for header and footer */
+header:hover,
 header *:hover,
+footer:hover,
 footer *:hover {
+    transform: none !important;
+}
+
+/* Excluded sections - unified approach with higher specificity */
+header .interactable:hover,
+footer .interactable:hover,
+.blog-post.interactable:hover,
+.blog-post .interactable:hover,
+header.interactable:hover,
+footer.interactable:hover,
+#contact.interactable:hover,
+#contact .interactable:hover,
+form.interactable:hover,
+form .interactable:hover,
+#blog .interactable:hover,
+.ui-protected .interactable:hover,
+.ui-protected.interactable:hover {
     transform: none !important;
 }
 
@@ -65,4 +97,24 @@ button.interactable:not(#start-game):not(header *):not(footer *):not(.blog-post 
 #hero-start-game:hover {
     background-color: #c0392b;
     transform: scale(1.05);
+}
+
+/* Partially protected elements keep hover effects but are protected from breaking/dragging */
+.ui-partial-protected.interactable:hover,
+.ui-partial-protected .interactable:hover {
+    /* Allow transform scale on hover */
+    transform: scale(1.05) !important;
+}
+
+/* Only apply game-mode specific effects when game is active */
+.game-mode .interactable:not(.ui-protected):not(.ui-partial-protected):hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 1px dashed rgba(231, 76, 60, 0.4);
+    pointer-events: none;
+    z-index: 50;
 }
