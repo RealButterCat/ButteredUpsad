@@ -536,27 +536,7 @@ const injectGameStyles = () => {
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
         
-        /* Improved hover states for interactable elements */
-        .game-interactable:hover {
-            cursor: pointer;
-        }
-        
-        /* Disable hover effect for specific elements */
-        header .game-interactable:hover::before,
-        footer .game-interactable:hover::before,
-        .blog-post.game-interactable:hover::before,
-        .blog-post .game-interactable:hover::before,
-        header.game-interactable:hover::before,
-        footer.game-interactable:hover::before,
-        nav.game-interactable:hover::before,
-        nav .game-interactable:hover::before,
-        #contact.game-interactable:hover::before,
-        #contact .game-interactable:hover::before,
-        form.game-interactable:hover::before,
-        form .game-interactable:hover::before {
-            display: none !important;
-        }
-        
+        /* Add hover indicator for all interactable elements */
         .game-mode .game-interactable:hover::before {
             content: '';
             position: absolute;
@@ -570,9 +550,26 @@ const injectGameStyles = () => {
             animation: border-pulse 1.5s infinite;
         }
         
+        /* Disable hover indicator for specific elements */
+        .game-mode header .game-interactable:hover::before,
+        .game-mode footer .game-interactable:hover::before,
+        .game-mode .blog-post.game-interactable:hover::before,
+        .game-mode .blog-post .game-interactable:hover::before,
+        .game-mode #contact.game-interactable:hover::before,
+        .game-mode #contact .game-interactable:hover::before,
+        .game-mode form.game-interactable:hover::before,
+        .game-mode form .game-interactable:hover::before {
+            display: none !important;
+        }
+        
         @keyframes border-pulse {
             0%, 100% { opacity: 0.3; }
             50% { opacity: 0.8; }
+        }
+        
+        /* Improved hover states for interactable elements */
+        .game-interactable:hover {
+            cursor: pointer;
         }
         
         /* Hide focus outlines in game mode */
