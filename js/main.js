@@ -549,7 +549,11 @@ const injectGameStyles = () => {
         header.game-interactable:hover::before,
         footer.game-interactable:hover::before,
         nav.game-interactable:hover::before,
-        nav .game-interactable:hover::before {
+        nav .game-interactable:hover::before,
+        #contact.game-interactable:hover::before,
+        #contact .game-interactable:hover::before,
+        form.game-interactable:hover::before,
+        form .game-interactable:hover::before {
             display: none !important;
         }
         
