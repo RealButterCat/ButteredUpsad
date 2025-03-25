@@ -117,10 +117,14 @@ class GameObject {
         
         console.log(`${this.type} destroyed (ID: ${this.id})`);
         
+        // Save the destroyed state to localStorage
+        this.saveDestroyedState();
+        
         // Remove DOM element if exists
         if (this.element) {
-            // Add destruction animation
-            this.element.classList.add('destroying');
+            // Add destruction animation - scale to 0
+            this.element.style.transition = 'transform 0.5s ease-out';
+            this.element.style.transform = 'scale(0)';
             
             // Remove after animation completes
             setTimeout(() => {
@@ -129,6 +133,21 @@ class GameObject {
                 }
                 this.element = null;
             }, 500);
+        }
+    }
+    
+    /**
+     * Save destroyed state to localStorage
+     */
+    saveDestroyedState() {
+        // Get existing destroyed objects
+        const savedDestroyedObjects = localStorage.getItem('butteredUpsad_destroyedObjects');
+        let destroyedObjects = savedDestroyedObjects ? JSON.parse(savedDestroyedObjects) : [];
+        
+        // Add this object's ID if not already in the list
+        if (!destroyedObjects.includes(this.id)) {
+            destroyedObjects.push(this.id);
+            localStorage.setItem('butteredUpsad_destroyedObjects', JSON.stringify(destroyedObjects));
         }
     }
     
@@ -348,6 +367,15 @@ class GameObjectManager {
     constructor() {
         this.objects = [];
         this.container = document.getElementById('game-container');
+        this.destroyedObjects = this.loadDestroyedObjects();
+    }
+    
+    /**
+     * Load destroyed objects from localStorage
+     */
+    loadDestroyedObjects() {
+        const savedDestroyedObjects = localStorage.getItem('butteredUpsad_destroyedObjects');
+        return savedDestroyedObjects ? JSON.parse(savedDestroyedObjects) : [];
     }
     
     /**
@@ -381,6 +409,13 @@ class GameObjectManager {
      * Add a new object to the world
      */
     addObject(object) {
+        // Check if this object was previously destroyed
+        if (this.destroyedObjects.includes(object.id)) {
+            // Don't add this object - it's permanently destroyed
+            console.log(`Object ${object.id} was previously destroyed, not adding back.`);
+            return null;
+        }
+        
         this.objects.push(object);
         
         // Create DOM element for the object
