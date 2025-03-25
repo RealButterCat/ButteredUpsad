@@ -92,6 +92,25 @@
     border-bottom-color: #2980b9;
 }
 
+/* Interactable DOM Elements */
+.interactable {
+    cursor: grab;
+    transition: transform 0.2s, box-shadow 0.2s, filter 0.3s;
+    position: relative;
+}
+
+.interactable:hover {
+    box-shadow: 0 0 8px rgba(52, 152, 219, 0.5);
+    transform: scale(1.01);
+}
+
+.interactable.dragging {
+    cursor: grabbing;
+    z-index: 1000; /* Bring dragged elements to front */
+    box-shadow: 0 0 15px rgba(52, 152, 219, 0.7);
+    transform: scale(1.03);
+}
+
 /* Breakable Objects */
 .breakable {
     background-color: #95a5a6;
@@ -103,27 +122,33 @@
     background-color: #7f8c8d;
 }
 
-.breakable.damaged-1 {
-    opacity: 0.8;
+/* Damage States for DOM and Game Elements */
+.game-damaged-1, .damaged-1 {
+    opacity: 0.9;
+    filter: brightness(0.95);
 }
 
-.breakable.damaged-2 {
+.game-damaged-2, .damaged-2 {
+    opacity: 0.7;
+    filter: brightness(0.85);
+}
+
+.game-destroyed, .destroyed {
     opacity: 0.5;
+    filter: brightness(0.7) grayscale(70%);
+    text-decoration: line-through;
+    pointer-events: none; /* Prevents further interaction with fully broken elements */
+}
+
+/* Allow grabbing even for broken elements */
+.game-destroyed.interactable, .destroyed.interactable {
+    pointer-events: all;
+    cursor: grab;
 }
 
 /* Solid physics objects */
 .solid {
     border: 1px solid rgba(0, 0, 0, 0.2);
-}
-
-/* Interactable Objects */
-.interactable {
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.interactable:hover {
-    transform: scale(1.05);
 }
 
 /* Collectible Items */
@@ -244,4 +269,58 @@
 @keyframes trail-fade {
     0% { opacity: 0.5; transform: scale(0.8); }
     100% { opacity: 0; transform: scale(0.2); }
+}
+
+/* Highlight for interactable elements */
+.game-highlight {
+    animation: highlight-pulse 0.5s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+    50% { box-shadow: 0 0 15px 3px rgba(52, 152, 219, 0.7); }
+}
+
+/* Global website-wide effects */
+.game-invert {
+    filter: invert(0.8);
+    transition: filter 0.3s ease;
+}
+
+.game-shake {
+    animation: website-shake 0.6s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes website-shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+    20%, 40%, 60%, 80% { transform: translateX(8px); }
+}
+
+/* Broken image style */
+img.game-destroyed {
+    filter: grayscale(100%) brightness(0.5) blur(2px);
+    opacity: 0.3;
+}
+
+/* Broken text style */
+p.game-destroyed, span.game-destroyed, h1.game-destroyed, h2.game-destroyed {
+    color: #7f8c8d;
+    text-decoration: line-through;
+}
+
+/* Broken button style */
+button.game-destroyed, input.game-destroyed {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(100%);
+}
+
+/* Dragging cursor for all draggable elements */
+*[draggable="true"], .interactable {
+    cursor: grab;
+}
+
+*[draggable="true"]:active, .interactable:active {
+    cursor: grabbing;
 }
