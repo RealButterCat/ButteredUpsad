@@ -10,7 +10,7 @@ class GameEngine {
         this.lastTimestamp = 0;
         this.gameContainer = document.getElementById('game-container');
         this.canvas = document.getElementById('game-canvas');
-        this.ctx = this.canvas.getContext('2d');
+        this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
         
         // Game systems
         this.player = null;
@@ -22,13 +22,16 @@ class GameEngine {
         this.questManager = null;
         this.reactivityManager = null;
         this.uiManager = null;
+        this.playerStats = {};
         
         // Auto-save timer
         this.autoSaveInterval = null;
         this.autoSaveDelay = 60000; // Save every minute
         
         // Initialize game container
-        this.initializeCanvas();
+        if (this.canvas) {
+            this.initializeCanvas();
+        }
         
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
@@ -47,50 +50,193 @@ class GameEngine {
         
         console.log('Starting game engine...');
         
-        // Set up game systems
-        this.player = new Player(
-            window.innerWidth / 2, 
-            window.innerHeight / 2
-        );
-        
-        this.world = new World();
-        this.objectManager = new GameObjectManager();
-        this.interactionManager = new InteractionManager(this);
-        this.inventoryManager = new InventoryManager();
-        this.dialogManager = new DialogManager();
-        this.questManager = new QuestManager(this);
-        
-        // Initialize UI manager first so it can show loading feedback
-        this.uiManager = new UIManager(this);
-        
-        // Create world reactivity system (must be after other systems are initialized)
-        this.reactivityManager = new WorldReactivity(this);
-        
-        // Load saved game state if exists
-        this.loadGameState();
-        
-        // Show game container with subtle transition
-        this.gameContainer.classList.remove('hidden');
-        setTimeout(() => {
-            this.gameContainer.classList.add('active');
-        }, 50);
-        
-        // Start game loop
-        this.isRunning = true;
-        requestAnimationFrame(this.gameLoop);
-        
-        // Initialize interactions
-        this.interactionManager.initialize();
-        
-        // Start auto-save
-        this.startAutoSave();
-        
-        // Transition UI to game mode
-        if (this.uiManager) {
-            this.uiManager.transitionToGameMode();
+        try {
+            // Set up game systems with error handling
+            
+            // Player
+            try {
+                this.player = new Player(
+                    window.innerWidth / 2, 
+                    window.innerHeight / 2
+                );
+            } catch (e) {
+                console.error('Error initializing Player:', e);
+                this.player = null;
+            }
+            
+            // World
+            try {
+                this.world = new World();
+            } catch (e) {
+                console.error('Error initializing World:', e);
+                this.world = null;
+            }
+            
+            // Object Manager
+            try {
+                this.objectManager = new GameObjectManager();
+            } catch (e) {
+                console.error('Error initializing GameObjectManager:', e);
+                this.objectManager = null;
+            }
+            
+            // Interaction Manager
+            try {
+                this.interactionManager = new InteractionManager(this);
+            } catch (e) {
+                console.error('Error initializing InteractionManager:', e);
+                this.interactionManager = null;
+            }
+            
+            // Inventory Manager
+            try {
+                if (typeof InventoryManager === 'function') {
+                    this.inventoryManager = new InventoryManager();
+                } else {
+                    console.warn('InventoryManager class not available');
+                    this.inventoryManager = null;
+                }
+            } catch (e) {
+                console.error('Error initializing InventoryManager:', e);
+                this.inventoryManager = null;
+            }
+            
+            // Dialog Manager
+            try {
+                if (typeof DialogManager === 'function') {
+                    this.dialogManager = new DialogManager();
+                } else {
+                    console.warn('DialogManager class not available');
+                    this.dialogManager = null;
+                }
+            } catch (e) {
+                console.error('Error initializing DialogManager:', e);
+                this.dialogManager = null;
+            }
+            
+            // Quest Manager
+            try {
+                if (typeof QuestManager === 'function') {
+                    this.questManager = new QuestManager(this);
+                } else {
+                    console.warn('QuestManager class not available');
+                    this.questManager = null;
+                }
+            } catch (e) {
+                console.error('Error initializing QuestManager:', e);
+                this.questManager = null;
+            }
+            
+            // UI Manager
+            try {
+                if (typeof UIManager === 'function') {
+                    this.uiManager = new UIManager(this);
+                } else {
+                    console.warn('UIManager class not available');
+                    this.uiManager = null;
+                }
+            } catch (e) {
+                console.error('Error initializing UIManager:', e);
+                this.uiManager = null;
+            }
+            
+            // Player Stats
+            try {
+                if (typeof PlayerStats === 'function') {
+                    this.playerStats = new PlayerStats();
+                } else {
+                    console.warn('PlayerStats class not available');
+                    this.playerStats = {};
+                }
+            } catch (e) {
+                console.error('Error initializing PlayerStats:', e);
+                this.playerStats = {};
+            }
+            
+            // Reactivity Manager (must be after other systems)
+            try {
+                if (typeof WorldReactivity === 'function') {
+                    this.reactivityManager = new WorldReactivity(this);
+                } else {
+                    console.warn('WorldReactivity class not available');
+                    this.reactivityManager = null;
+                }
+            } catch (e) {
+                console.error('Error initializing WorldReactivity:', e);
+                this.reactivityManager = null;
+            }
+            
+            // Load saved game state if exists
+            this.loadGameState();
+            
+            // Show game container with subtle transition
+            if (this.gameContainer) {
+                this.gameContainer.classList.remove('hidden');
+                setTimeout(() => {
+                    this.gameContainer.classList.add('active');
+                }, 50);
+            }
+            
+            // Start game loop
+            this.isRunning = true;
+            requestAnimationFrame(this.gameLoop);
+            
+            // Initialize interactions
+            if (this.interactionManager) {
+                this.interactionManager.initialize();
+            }
+            
+            // Start auto-save
+            this.startAutoSave();
+            
+            // Transition UI to game mode
+            if (this.uiManager) {
+                this.uiManager.transitionToGameMode();
+            }
+            
+            console.log('Game engine started!');
+        } catch (error) {
+            console.error('Error starting game engine:', error);
+            this.showErrorMessage('Failed to start game. Check console for details.');
         }
+    }
+    
+    /**
+     * Show an error message to the user
+     */
+    showErrorMessage(message) {
+        // Create error message element
+        const errorBox = document.createElement('div');
+        errorBox.style.position = 'fixed';
+        errorBox.style.top = '50%';
+        errorBox.style.left = '50%';
+        errorBox.style.transform = 'translate(-50%, -50%)';
+        errorBox.style.backgroundColor = 'rgba(231, 76, 60, 0.9)';
+        errorBox.style.color = 'white';
+        errorBox.style.padding = '20px';
+        errorBox.style.borderRadius = '5px';
+        errorBox.style.zIndex = '9999';
+        errorBox.style.maxWidth = '500px';
+        errorBox.style.textAlign = 'center';
         
-        console.log('Game engine started!');
+        errorBox.innerHTML = `
+            <h3>Game Error</h3>
+            <p>${message}</p>
+            <p>Try refreshing the page or checking your browser console.</p>
+            <button id="error-close" style="background: white; color: #e74c3c; border: none; padding: 5px 15px; border-radius: 3px; margin-top: 10px; cursor: pointer;">Close</button>
+        `;
+        
+        document.body.appendChild(errorBox);
+        
+        // Add close button functionality
+        const closeButton = document.getElementById('error-close');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                if (errorBox.parentNode) {
+                    errorBox.parentNode.removeChild(errorBox);
+                }
+            });
+        }
     }
     
     /**
@@ -113,10 +259,12 @@ class GameEngine {
         }
         
         // Hide game container with subtle transition
-        this.gameContainer.classList.remove('active');
-        setTimeout(() => {
-            this.gameContainer.classList.add('hidden');
-        }, 300);
+        if (this.gameContainer) {
+            this.gameContainer.classList.remove('active');
+            setTimeout(() => {
+                this.gameContainer.classList.add('hidden');
+            }, 300);
+        }
         
         // Stop game loop
         this.isRunning = false;
@@ -175,6 +323,8 @@ class GameEngine {
      * Render game objects
      */
     render() {
+        if (!this.ctx) return;
+        
         // Render world
         if (this.world) {
             this.world.render(this.ctx);
@@ -202,15 +352,19 @@ class GameEngine {
      * Clear canvas
      */
     clearCanvas() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        if (this.ctx && this.canvas) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
     }
     
     /**
      * Handle window resize
      */
     handleResize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        if (this.canvas) {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+        }
     }
     
     /**
@@ -243,44 +397,54 @@ class GameEngine {
      * Save game state to localStorage
      */
     saveGameState(isAutoSave = false) {
-        const gameState = {
-            player: this.player ? this.player.serialize() : null,
-            world: this.world ? this.world.serialize() : null,
-            objects: this.objectManager ? this.objectManager.serialize() : null,
-            inventory: this.inventoryManager ? this.inventoryManager.serialize() : null,
-            savedAt: new Date().toISOString()
-        };
-        
-        localStorage.setItem('butteredUpsad_gameState', JSON.stringify(gameState));
-        
-        if (!isAutoSave) {
-            console.log('Game state saved!');
-        }
-        
-        // Also save reactivity state if available
-        if (this.reactivityManager) {
-            this.reactivityManager.saveState();
-        }
-        
-        // Show save indicator if UI manager exists and not an auto-save
-        if (this.uiManager && !isAutoSave) {
-            this.uiManager.showNotification('Game progress saved', 'success', 2000);
-        } else if (this.uiManager && isAutoSave) {
-            // Show subtle auto-save indicator
-            const saveIndicator = document.createElement('div');
-            saveIndicator.className = 'save-indicator saving';
-            saveIndicator.textContent = 'Auto-saving...';
-            document.body.appendChild(saveIndicator);
+        try {
+            const gameState = {
+                player: this.player ? this.player.serialize() : null,
+                world: this.world ? this.world.serialize() : null,
+                objects: this.objectManager ? this.objectManager.serialize() : null,
+                inventory: this.inventoryManager ? this.inventoryManager.serialize() : null,
+                savedAt: new Date().toISOString()
+            };
             
-            // Remove after 1 second
-            setTimeout(() => {
-                saveIndicator.classList.remove('saving');
+            // Try localStorage first, fall back to sessionStorage
+            try {
+                localStorage.setItem('butteredUpsad_gameState', JSON.stringify(gameState));
+            } catch (e) {
+                console.warn('localStorage not available. Falling back to sessionStorage.');
+                sessionStorage.setItem('butteredUpsad_gameState', JSON.stringify(gameState));
+            }
+            
+            if (!isAutoSave) {
+                console.log('Game state saved!');
+            }
+            
+            // Also save reactivity state if available
+            if (this.reactivityManager) {
+                this.reactivityManager.saveState();
+            }
+            
+            // Show save indicator if UI manager exists and not an auto-save
+            if (this.uiManager && !isAutoSave) {
+                this.uiManager.showNotification('Game progress saved', 'success', 2000);
+            } else if (this.uiManager && isAutoSave) {
+                // Show subtle auto-save indicator
+                const saveIndicator = document.createElement('div');
+                saveIndicator.className = 'save-indicator saving';
+                saveIndicator.textContent = 'Auto-saving...';
+                document.body.appendChild(saveIndicator);
+                
+                // Remove after 1 second
                 setTimeout(() => {
-                    if (saveIndicator.parentNode) {
-                        saveIndicator.parentNode.removeChild(saveIndicator);
-                    }
-                }, 300);
-            }, 1000);
+                    saveIndicator.classList.remove('saving');
+                    setTimeout(() => {
+                        if (saveIndicator.parentNode) {
+                            saveIndicator.parentNode.removeChild(saveIndicator);
+                        }
+                    }, 300);
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('Error saving game state:', error);
         }
     }
     
@@ -288,7 +452,18 @@ class GameEngine {
      * Load game state from localStorage
      */
     loadGameState() {
-        const savedState = localStorage.getItem('butteredUpsad_gameState');
+        let savedState = null;
+        
+        // Try localStorage first, then sessionStorage
+        try {
+            savedState = localStorage.getItem('butteredUpsad_gameState');
+            if (!savedState) {
+                savedState = sessionStorage.getItem('butteredUpsad_gameState');
+            }
+        } catch (e) {
+            console.warn('Error accessing storage:', e);
+            return;
+        }
         
         if (savedState) {
             try {
@@ -355,10 +530,24 @@ class GameEngine {
      * Reset game state
      */
     resetGameState() {
-        localStorage.removeItem('butteredUpsad_gameState');
-        localStorage.removeItem('butteredUpsad_destroyedObjects');
-        localStorage.removeItem('butteredUpsad_questState');
-        localStorage.removeItem('butteredUpsad_reactivityState');
+        try {
+            localStorage.removeItem('butteredUpsad_gameState');
+            localStorage.removeItem('butteredUpsad_destroyedObjects');
+            localStorage.removeItem('butteredUpsad_questState');
+            localStorage.removeItem('butteredUpsad_reactivityState');
+        } catch (e) {
+            console.warn('Error accessing localStorage:', e);
+        }
+        
+        try {
+            sessionStorage.removeItem('butteredUpsad_gameState');
+            sessionStorage.removeItem('butteredUpsad_destroyedObjects');
+            sessionStorage.removeItem('butteredUpsad_questState');
+            sessionStorage.removeItem('butteredUpsad_reactivityState');
+        } catch (e) {
+            console.warn('Error accessing sessionStorage:', e);
+        }
+        
         console.log('Game state reset!');
         
         // Reset reactivity state if available
