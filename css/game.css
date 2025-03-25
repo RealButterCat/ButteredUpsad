@@ -112,7 +112,7 @@
     transition: transform 0.2s;
 }
 
-/* Disable hover scale effect for header, footer, and blog posts */
+/* Disable hover scale effect for header, footer, blog posts, and contact section */
 header .interactable:hover,
 footer .interactable:hover,
 .blog-post.interactable:hover,
@@ -120,12 +120,16 @@ footer .interactable:hover,
 header.interactable:hover,
 footer.interactable:hover,
 nav.interactable:hover,
-nav .interactable:hover {
+nav .interactable:hover,
+#contact.interactable:hover,
+#contact .interactable:hover,
+form.interactable:hover,
+form .interactable:hover {
     transform: none !important;
 }
 
 /* Regular interactable hover effect */
-.interactable:hover:not(header, footer, .blog-post, nav):not(.blog-post *):not(header *):not(footer *):not(nav *) {
+.interactable:hover:not(header, footer, .blog-post, nav, #contact, form):not(.blog-post *):not(header *):not(footer *):not(nav *):not(#contact *):not(form *) {
     transform: scale(1.05);
 }
 
