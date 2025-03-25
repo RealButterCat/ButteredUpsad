@@ -60,14 +60,34 @@ class InteractionManager {
      * Initialize interactions with website elements
      */
     initializeWebsiteInteractions() {
+        // Define protected elements that should not be draggable or breakable
+        const protectedSelectors = [
+            'header', 'footer', 'nav', '.nav-links', '.nav-links *', 
+            '#game-container', '#game-container *',
+            '#start-game', '#hero-start-game',
+            '#inventory-panel', '#dialog-box',
+            '#game-mode-indicator', '#keyboard-controls',
+            '#keyboard-controls-panel',
+            '.game-notification', '.game-tooltip',
+            '.save-indicator', '#contact', '#contact *',
+            'form', 'form *'
+        ];
+        
         // Add interactive class to ALL elements that can be affected by the game
         const interactiveSelectors = [
             'h1', 'h2', 'p', 'button', 'input', 'textarea',
-            '.blog-post', '.nav-links li', 'form', 'img',
-            'nav', 'footer', 'header', 'div', 'section', 'article',
+            '.blog-post', 'img', 'div', 'section', 'article',
             'span', 'a', 'ul', 'ol', 'li', 'label'
         ];
         
+        // First add ui-protected class to all protected elements
+        const protectedElements = document.querySelectorAll(protectedSelectors.join(','));
+        protectedElements.forEach(element => {
+            element.classList.add('ui-protected');
+            console.log('Protected UI element:', element.tagName, element.id || '');
+        });
+        
+        // Then get all potential interactive elements
         const websiteElements = document.querySelectorAll(interactiveSelectors.join(','));
         
         websiteElements.forEach(element => {
@@ -76,6 +96,11 @@ class InteractionManager {
             
             // Skip body and html elements
             if (element === document.body || element === document.documentElement) return;
+            
+            // Skip protected elements and their children
+            if (element.classList.contains('ui-protected') || element.closest('.ui-protected')) {
+                return;
+            }
             
             // Add interactable class for styling and interaction
             element.classList.add('game-interactable', 'interactable');
@@ -122,6 +147,11 @@ class InteractionManager {
         this.worldState.brokenElements.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
+                // Skip protected elements
+                if (element.classList.contains('ui-protected') || element.closest('.ui-protected')) {
+                    return;
+                }
+                
                 element.dataset.gameHealth = '0';
                 element.classList.add('game-destroyed');
                 
@@ -139,6 +169,11 @@ class InteractionManager {
         Object.entries(this.worldState.movedElements).forEach(([id, position]) => {
             const element = document.getElementById(id);
             if (element) {
+                // Skip protected elements
+                if (element.classList.contains('ui-protected') || element.closest('.ui-protected')) {
+                    return;
+                }
+                
                 // Set element to absolute position if not already
                 const computedStyle = window.getComputedStyle(element);
                 if (computedStyle.position !== 'absolute') {
@@ -188,6 +223,12 @@ class InteractionManager {
             if (!target || target === this.container || target === document.body) {
                 return;
             }
+        }
+        
+        // Don't allow dragging protected UI elements
+        if (target.classList.contains('ui-protected') || target.closest('.ui-protected')) {
+            console.log('Prevented dragging of protected UI element');
+            return;
         }
         
         // Start dragging the element
@@ -462,6 +503,12 @@ class InteractionManager {
             }
         }
         
+        // Don't interact with protected UI elements
+        if (target && (target.classList.contains('ui-protected') || target.closest('.ui-protected'))) {
+            console.log('Prevented interaction with protected UI element');
+            return;
+        }
+        
         // If found an interactable element
         if (target && target.classList.contains('interactable')) {
             console.log('Interacting with website element:', target);
@@ -519,6 +566,12 @@ class InteractionManager {
      */
     damageWebsiteElement(element) {
         if (!element.dataset.gameHealth) return;
+        
+        // Don't damage protected UI elements
+        if (element.classList.contains('ui-protected') || element.closest('.ui-protected')) {
+            console.log('Prevented damaging protected UI element');
+            return;
+        }
         
         // Reduce health
         let health = parseInt(element.dataset.gameHealth);
