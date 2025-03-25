@@ -113,15 +113,25 @@
 }
 
 /* Default hover behavior for all interactable elements */
-/* Only apply hover effect when game mode is active */
-.game-mode .interactable:hover {
+.interactable:hover {
     transform: scale(1.05);
 }
 
-/* Disable hover scale effect for protected elements */
-.game-mode .ui-protected .interactable:hover,
-.game-mode .ui-protected:hover,
-.game-mode .ui-protected.interactable:hover {
+/* Disable hover scale effect for header, footer, blog posts, and contact section */
+header .interactable:hover,
+footer .interactable:hover,
+.blog-post.interactable:hover,
+.blog-post .interactable:hover,
+header.interactable:hover,
+footer.interactable:hover,
+nav.interactable:hover,
+nav .interactable:hover,
+#contact.interactable:hover,
+#contact .interactable:hover,
+form.interactable:hover,
+form .interactable:hover,
+.ui-protected .interactable:hover,
+.ui-protected.interactable:hover {
     transform: none !important;
 }
 
