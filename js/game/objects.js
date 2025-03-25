@@ -22,6 +22,8 @@ class GameObject {
         this.interactive = true;
         this.visible = true;
         this.destroyed = false;
+        this.movable = false; // Whether the object can be pushed
+        this.ghost = false;   // Whether the object ignores collisions
         
         // DOM element (created by manager when added to the world)
         this.element = null;
@@ -137,6 +139,92 @@ class GameObject {
     }
     
     /**
+     * Check collision with another object using bounding-box
+     */
+    collidesWith(otherObj) {
+        // Ghost objects don't collide
+        if (this.ghost || otherObj.ghost) return false;
+        
+        // Bounding-box collision check with a small padding to prevent "sticking"
+        const padding = 1;
+        return (
+            this.x < otherObj.x + otherObj.width - padding &&
+            this.x + this.width - padding > otherObj.x &&
+            this.y < otherObj.y + otherObj.height - padding &&
+            this.y + this.height - padding > otherObj.y
+        );
+    }
+    
+    /**
+     * Move object by specified amount, handling collisions
+     */
+    move(dx, dy, objectManager) {
+        // If not movable, do nothing
+        if (!this.movable) return false;
+        
+        // Store original position in case we need to revert
+        const originalX = this.x;
+        const originalY = this.y;
+        
+        // Apply movement
+        this.x += dx;
+        this.y += dy;
+        
+        // Check for collisions with other objects
+        let collided = false;
+        if (objectManager) {
+            const collidingObjects = objectManager.objects.filter(obj => 
+                obj !== this && !obj.destroyed && obj.solid && this.collidesWith(obj)
+            );
+            
+            // Handle collisions
+            if (collidingObjects.length > 0) {
+                // Try to push movable objects
+                const movableObjects = collidingObjects.filter(obj => obj.movable);
+                
+                if (movableObjects.length > 0) {
+                    // Attempt to push each movable object
+                    let allPushed = true;
+                    
+                    movableObjects.forEach(obj => {
+                        const pushed = obj.move(dx, dy, objectManager);
+                        if (!pushed) allPushed = false;
+                    });
+                    
+                    // If we couldn't push all objects, revert position
+                    if (!allPushed) {
+                        collided = true;
+                    }
+                } else {
+                    // No movable objects to push, so we collided
+                    collided = true;
+                }
+            }
+        }
+        
+        // Check for world boundaries
+        if (this.x < 0 || this.x + this.width > window.innerWidth ||
+            this.y < 0 || this.y + this.height > window.innerHeight) {
+            collided = true;
+        }
+        
+        // If collision occurred, revert position
+        if (collided) {
+            this.x = originalX;
+            this.y = originalY;
+            return false;
+        }
+        
+        // Update DOM element position
+        if (this.element) {
+            this.element.style.left = `${this.x}px`;
+            this.element.style.top = `${this.y}px`;
+        }
+        
+        return true;
+    }
+    
+    /**
      * Save destroyed state to localStorage
      */
     saveDestroyedState() {
@@ -167,7 +255,9 @@ class GameObject {
             solid: this.solid,
             interactive: this.interactive,
             visible: this.visible,
-            destroyed: this.destroyed
+            destroyed: this.destroyed,
+            movable: this.movable,
+            ghost: this.ghost
         };
     }
     
@@ -200,6 +290,36 @@ class WallObject extends GameObject {
         ctx.strokeStyle = '#95a5a6';
         ctx.lineWidth = 2;
         ctx.strokeRect(this.x, this.y, this.width, this.height);
+    }
+}
+
+/**
+ * MovableBlock object (can be pushed around)
+ */
+class MovableBlockObject extends GameObject {
+    constructor(x, y, width, height) {
+        super(x, y, width, height, 'movable-block');
+        this.solid = true;
+        this.movable = true;
+        this.health = 2;
+        this.maxHealth = 2;
+    }
+    
+    render(ctx) {
+        if (!this.visible) return;
+        
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        
+        // Add a pattern to indicate it's movable
+        ctx.strokeStyle = '#2980b9';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x + 5, this.y + 5);
+        ctx.lineTo(this.x + this.width - 5, this.y + 5);
+        ctx.moveTo(this.x + 5, this.y + this.height - 5);
+        ctx.lineTo(this.x + this.width - 5, this.y + this.height - 5);
+        ctx.stroke();
     }
 }
 
@@ -239,6 +359,7 @@ class CollectibleObject extends GameObject {
         super(x, y, size, size, 'collectible');
         this.itemType = itemType || 'coin';
         this.solid = false;
+        this.ghost = true; // Collectibles don't block movement
         this.value = 1;
     }
     
@@ -291,6 +412,7 @@ class NPCObject extends GameObject {
         super(x, y, size, size, 'npc');
         this.name = name || 'Unknown NPC';
         this.solid = false;
+        this.ghost = true; // NPCs don't block movement
         this.dialogues = [
             { text: "Hello there! I'm an NPC.", options: [
                 { text: "Hello!", responseIndex: 1 },
@@ -452,6 +574,16 @@ class GameObjectManager {
             element.classList.add('solid');
         }
         
+        // Add class for movable objects
+        if (object.movable) {
+            element.classList.add('movable');
+        }
+        
+        // Add class for ghost objects
+        if (object.ghost) {
+            element.classList.add('ghost');
+        }
+        
         // Set initial damage visual if needed
         if (object.health < object.maxHealth) {
             const healthPercentage = object.health / object.maxHealth;
@@ -494,10 +626,42 @@ class GameObjectManager {
     }
     
     /**
+     * Check if a position has any solid objects (collision detection)
+     */
+    isSolidAt(x, y, width, height, excludeObj = null) {
+        // Check for solid objects at this position
+        return this.objects.some(obj => {
+            if (obj === excludeObj || obj.destroyed || !obj.solid) return false;
+            
+            // Bounding-box collision check
+            return (
+                x < obj.x + obj.width &&
+                x + width > obj.x &&
+                y < obj.y + obj.height &&
+                y + height > obj.y
+            );
+        });
+    }
+    
+    /**
+     * Try to move an object to a new position, handling collisions
+     */
+    tryMoveObject(object, newX, newY) {
+        if (!object || object.destroyed) return false;
+        
+        // Calculate movement amount
+        const dx = newX - object.x;
+        const dy = newY - object.y;
+        
+        // Attempt to move the object
+        return object.move(dx, dy, this);
+    }
+    
+    /**
      * Spawn random objects around the world
      */
     spawnRandomObjects(count = 10) {
-        const objectTypes = ['wall', 'tree', 'collectible', 'npc'];
+        const objectTypes = ['wall', 'tree', 'collectible', 'npc', 'movable-block'];
         const npcNames = ['Guide', 'Trader', 'Explorer', 'Wizard', 'Blacksmith'];
         
         for (let i = 0; i < count; i++) {
@@ -512,6 +676,10 @@ class GameObjectManager {
                     const width = 30 + Math.random() * 70;
                     const height = 30 + Math.random() * 70;
                     object = new WallObject(x, y, width, height);
+                    break;
+                
+                case 'movable-block':
+                    object = new MovableBlockObject(x, y, 40, 40);
                     break;
                     
                 case 'tree':
@@ -578,6 +746,10 @@ class GameObjectManager {
             switch (objData.className) {
                 case 'WallObject':
                     object = new WallObject(objData.x, objData.y, objData.width, objData.height);
+                    break;
+                
+                case 'MovableBlockObject':
+                    object = new MovableBlockObject(objData.x, objData.y, objData.width, objData.height);
                     break;
                     
                 case 'TreeObject':
