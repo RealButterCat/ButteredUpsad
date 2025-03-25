@@ -320,6 +320,8 @@ footer {
     margin-bottom: 2rem;
     overflow: hidden;
     transition: all 0.3s ease-in-out;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .hero-bg {
@@ -337,6 +339,7 @@ footer {
 .hero-content {
     max-width: 800px;
     margin: 0 auto;
+    padding: 0 20px;
 }
 
 .hero-title {
@@ -349,6 +352,7 @@ footer {
     font-size: 1.2rem;
     margin-bottom: 2rem;
     color: #34495e;
+    line-height: 1.6;
 }
 
 .game-mode .hero-bg {
@@ -359,4 +363,98 @@ footer {
 @keyframes pulse-bg {
     0% { opacity: 0.05; }
     100% { opacity: 0.2; }
+}
+
+/* Hero Call to Action Button */
+.hero-cta {
+    display: inline-block;
+    background-color: #e74c3c;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: bold;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-cta:hover {
+    background-color: #c0392b;
+    transform: translateY(-3px);
+    box-shadow: 0 7px 14px rgba(0, 0, 0, 0.15);
+}
+
+.hero-cta:active {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.hero-cta::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+
+.hero-cta:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+.hero-cta:disabled {
+    background-color: #95a5a6;
+    cursor: default;
+    transform: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    opacity: 0.7;
+}
+
+/* Game Loading Indicator */
+.game-loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.game-loading.visible {
+    opacity: 1;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top: 4px solid #e74c3c;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
