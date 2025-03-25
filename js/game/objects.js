@@ -4,19 +4,400 @@
  */
 
 class GameObject {
-    // ... [Previous GameObject code remains unchanged]
+    constructor(x, y, width, height, type) {
+        this.id = Math.random().toString(36).substr(2, 9); // Unique ID
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.type = type || 'generic';
+        
+        // State
+        this.health = 1;
+        this.maxHealth = 1;
+        this.solid = false;
+        this.interactive = true;
+        this.visible = true;
+        this.destroyed = false;
+        
+        // DOM element (created by manager when added to the world)
+        this.element = null;
+    }
+    
+    /**
+     * Update object state
+     */
+    update(deltaTime) {
+        // Base update logic (can be overridden by subclasses)
+    }
+    
+    /**
+     * Render object
+     */
+    render(ctx) {
+        if (!this.visible) return;
+        
+        // Default rendering (can be overridden by subclasses)
+        ctx.fillStyle = '#95a5a6';
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+    
+    /**
+     * Handle click interaction
+     */
+    onClick(event) {
+        if (!this.interactive) return;
+        
+        console.log(`Clicked on ${this.type} object (ID: ${this.id})`);
+        
+        // Default click behavior is to take damage
+        if (this.health > 0) {
+            this.takeDamage(1);
+        }
+    }
+    
+    /**
+     * Take damage
+     */
+    takeDamage(amount) {
+        if (!this.interactive) return;
+        
+        this.health = Math.max(0, this.health - amount);
+        
+        // Visual feedback
+        if (this.element) {
+            this.element.classList.add('shake');
+            setTimeout(() => {
+                this.element.classList.remove('shake');
+            }, 200);
+            
+            // Update visual damage state
+            this.updateDamageVisual();
+        }
+        
+        console.log(`${this.type} took ${amount} damage. Health: ${this.health}/${this.maxHealth}`);
+        
+        // Check if destroyed
+        if (this.health <= 0) {
+            this.destroy();
+        }
+    }
+    
+    /**
+     * Update visual representation of damage
+     */
+    updateDamageVisual() {
+        if (!this.element) return;
+        
+        // Remove any existing damage classes
+        this.element.classList.remove('damaged-1', 'damaged-2');
+        
+        // Add appropriate damage class based on health percentage
+        const healthPercentage = this.health / this.maxHealth;
+        
+        if (healthPercentage <= 0.33) {
+            this.element.classList.add('damaged-2');
+        } else if (healthPercentage <= 0.66) {
+            this.element.classList.add('damaged-1');
+        }
+    }
+    
+    /**
+     * Destroy object
+     */
+    destroy() {
+        if (this.destroyed) return;
+        
+        this.destroyed = true;
+        this.interactive = false;
+        this.solid = false;
+        
+        console.log(`${this.type} destroyed (ID: ${this.id})`);
+        
+        // Remove DOM element if exists
+        if (this.element) {
+            // Add destruction animation
+            this.element.classList.add('destroying');
+            
+            // Remove after animation completes
+            setTimeout(() => {
+                if (this.element && this.element.parentNode) {
+                    this.element.parentNode.removeChild(this.element);
+                }
+                this.element = null;
+            }, 500);
+        }
+    }
+    
+    /**
+     * Serialize object for saving
+     */
+    serialize() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            width: this.width,
+            height: this.height,
+            type: this.type,
+            health: this.health,
+            maxHealth: this.maxHealth,
+            solid: this.solid,
+            interactive: this.interactive,
+            visible: this.visible,
+            destroyed: this.destroyed
+        };
+    }
+    
+    /**
+     * Deserialize from saved data
+     */
+    deserialize(data) {
+        Object.assign(this, data);
+    }
 }
 
+/**
+ * Wall object (solid barrier)
+ */
 class WallObject extends GameObject {
-    // ... [Previous WallObject code remains unchanged]
+    constructor(x, y, width, height) {
+        super(x, y, width, height, 'wall');
+        this.solid = true;
+        this.health = 3;
+        this.maxHealth = 3;
+    }
+    
+    render(ctx) {
+        if (!this.visible) return;
+        
+        ctx.fillStyle = '#7f8c8d';
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        
+        // Add a border
+        ctx.strokeStyle = '#95a5a6';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+    }
 }
 
+/**
+ * Tree object (decorative, breakable)
+ */
 class TreeObject extends GameObject {
-    // ... [Previous TreeObject code remains unchanged]
+    constructor(x, y) {
+        const size = 40;
+        super(x, y, size, size, 'tree');
+        this.solid = true;
+        this.health = 2;
+        this.maxHealth = 2;
+    }
+    
+    render(ctx) {
+        if (!this.visible) return;
+        
+        // Draw tree trunk
+        ctx.fillStyle = '#8B4513'; // Brown
+        ctx.fillRect(this.x + this.width/3, this.y + this.height/2, this.width/3, this.height/2);
+        
+        // Draw tree top (circle)
+        ctx.fillStyle = '#2ecc71'; // Green
+        ctx.beginPath();
+        ctx.arc(this.x + this.width/2, this.y + this.height/3, this.width/2 - 5, 0, Math.PI * 2);
+        ctx.fill();
+    }
 }
 
+/**
+ * Collectible object (item that can be picked up)
+ */
 class CollectibleObject extends GameObject {
-    // ... [Previous CollectibleObject code remains unchanged]
+    constructor(x, y, itemType) {
+        const size = 20;
+        super(x, y, size, size, 'collectible');
+        this.itemType = itemType || 'coin';
+        this.solid = false;
+        this.value = 1;
+    }
+    
+    render(ctx) {
+        if (!this.visible) return;
+        
+        // Draw a circle for the collectible
+        ctx.fillStyle = '#f1c40f'; // Gold color
+        ctx.beginPath();
+        ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw a subtle glow
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2 + 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#f39c12';
+        ctx.fill();
+        ctx.restore();
+    }
+    
+    onClick(event) {
+        if (!this.interactive || this.destroyed) return;
+        
+        console.log(`Collected ${this.itemType} (value: ${this.value})`);
+        
+        // Add to inventory (this will be called by the inventory manager)
+        const inventoryEvent = new CustomEvent('collect-item', {
+            detail: {
+                type: this.itemType,
+                value: this.value,
+                objectId: this.id
+            }
+        });
+        
+        document.dispatchEvent(inventoryEvent);
+        
+        // Destroy the object
+        this.destroy();
+    }
+}
+
+/**
+ * Server object (breaking it randomizes website colors)
+ */
+class ServerObject extends GameObject {
+    constructor(x, y) {
+        const width = 40;
+        const height = 60;
+        super(x, y, width, height, 'server');
+        this.solid = true;
+        this.health = 3;
+        this.maxHealth = 3;
+    }
+    
+    render(ctx) {
+        if (!this.visible) return;
+        
+        // Draw server rack
+        ctx.fillStyle = '#34495e';
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        
+        // Draw server lights and details
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(this.x + 5, this.y + 10, 5, 5); // Green status light
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(this.x + 5, this.y + 20, 5, 5); // Red status light
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(this.x + 5, this.y + 30, 5, 5); // Blue status light
+        
+        // Server rack details
+        ctx.fillStyle = '#95a5a6';
+        ctx.fillRect(this.x, this.y + 45, this.width, 2); // Horizontal divider
+        ctx.fillRect(this.x, this.y + 15, this.width, 1); // Thin divider
+        ctx.fillRect(this.x, this.y + 30, this.width, 1); // Thin divider
+    }
+    
+    destroy() {
+        if (this.destroyed) return;
+        
+        super.destroy();
+        
+        // Trigger server break event
+        const serverBreakEvent = new CustomEvent('server-break', {
+            detail: {
+                id: this.id,
+                x: this.x,
+                y: this.y
+            }
+        });
+        
+        document.dispatchEvent(serverBreakEvent);
+    }
+}
+
+/**
+ * Key object (unlocks secret section when collected)
+ */
+class KeyObject extends GameObject {
+    constructor(x, y) {
+        const size = 25;
+        super(x, y, size, size, 'key');
+        this.solid = false;
+        this.interactive = true;
+    }
+    
+    render(ctx) {
+        if (!this.visible) return;
+        
+        // Draw key
+        ctx.fillStyle = '#f1c40f';
+        
+        // Key head
+        ctx.beginPath();
+        ctx.arc(this.x + this.width/2, this.y + this.height/4, this.width/4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Key shaft
+        ctx.fillRect(
+            this.x + this.width/2 - 2,
+            this.y + this.height/4,
+            4,
+            this.height/2
+        );
+        
+        // Key teeth
+        ctx.fillRect(
+            this.x + this.width/2,
+            this.y + this.height * 0.6,
+            this.width/4,
+            this.height/10
+        );
+        
+        ctx.fillRect(
+            this.x + this.width/2,
+            this.y + this.height * 0.75,
+            this.width/4,
+            this.height/10
+        );
+        
+        // Glow effect
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/1.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#f39c12';
+        ctx.fill();
+        ctx.restore();
+    }
+    
+    onClick(event) {
+        if (!this.interactive || this.destroyed) return;
+        
+        console.log(`Found a key!`);
+        
+        // Trigger key collect event
+        const keyCollectEvent = new CustomEvent('key-collect', {
+            detail: {
+                id: this.id,
+                x: this.x,
+                y: this.y
+            }
+        });
+        
+        document.dispatchEvent(keyCollectEvent);
+        
+        // Add to inventory
+        const inventoryEvent = new CustomEvent('collect-item', {
+            detail: {
+                type: 'key',
+                value: 1,
+                objectId: this.id
+            }
+        });
+        
+        document.dispatchEvent(inventoryEvent);
+        
+        // Destroy this object
+        this.destroy();
+    }
 }
 
 /**
@@ -28,210 +409,316 @@ class NPCObject extends GameObject {
         super(x, y, size, size, 'npc');
         this.name = name || 'Unknown NPC';
         this.solid = false;
-        
-        // Quest-related properties
-        this.hasQuest = true;
-        this.currentQuest = null;
-        this.questCompleted = false;
-        
-        // Available quests for this NPC
-        this.availableQuests = [
-            {
-                id: 'break_blocks',
-                title: 'Block Breaker',
-                description: 'Break 10 blocks on the website.',
-                target: 10,
-                progress: 0,
-                reward: () => {
-                    // Change website theme color
-                    document.documentElement.style.setProperty('--theme-color', '#' + Math.floor(Math.random()*16777215).toString(16));
-                    return 'Changed the website theme!';
-                }
-            },
-            {
-                id: 'collect_coins',
-                title: 'Coin Collector',
-                description: 'Collect 5 coins from around the website.',
-                target: 5,
-                progress: 0,
-                reward: () => {
-                    // Add special visual effect
-                    document.body.classList.add('quest-complete-effect');
-                    setTimeout(() => document.body.classList.remove('quest-complete-effect'), 3000);
-                    return 'Added a special visual effect!';
-                }
-            }
-        ];
-
-        // Dialog system with quest integration
         this.dialogues = [
-            { 
-                text: `Hello there! I'm ${this.name}. Would you like a quest?`,
-                options: [
-                    { text: "Yes, give me a quest!", responseIndex: 1 },
-                    { text: "No thanks.", responseIndex: -1 }
-                ]
-            },
-            {
-                text: "Great! Here's what you can do...",
-                options: [
-                    { text: "Break 10 blocks", responseIndex: 2 },
-                    { text: "Collect 5 coins", responseIndex: 3 }
-                ]
-            }
+            { text: "Hello there! I'm an NPC.", options: [
+                { text: "Hello!", responseIndex: 1 },
+                { text: "What can you do?", responseIndex: 2 },
+                { text: "Goodbye.", responseIndex: -1 }
+            ]},
+            { text: "Nice to meet you!", options: [
+                { text: "What can you do?", responseIndex: 2 },
+                { text: "Goodbye.", responseIndex: -1 }
+            ]},
+            { text: "I can give quests or just chat with you!", options: [
+                { text: "Interesting!", responseIndex: 3 },
+                { text: "Goodbye.", responseIndex: -1 }
+            ]},
+            { text: "Remember, you can interact with anything in this world!", options: [
+                { text: "I'll try that out. Goodbye!", responseIndex: -1 }
+            ]}
         ];
-
-        // Add quest-specific dialogs
-        this.questDialogs = {
-            'break_blocks': {
-                text: "Break 10 blocks anywhere on the website. Come back when you're done!",
-                options: [{ text: "I'll do it!", responseIndex: -1 }]
-            },
-            'collect_coins': {
-                text: "Find and collect 5 coins scattered around. Return to me after!",
-                options: [{ text: "On it!", responseIndex: -1 }]
-            }
-        };
-
         this.currentDialogIndex = 0;
-
-        // Create speech bubble
-        this.createSpeechBubble();
     }
-
-    /**
-     * Create speech bubble element
-     */
-    createSpeechBubble() {
-        this.speechBubble = document.createElement('div');
-        this.speechBubble.className = 'npc-speech-bubble hidden';
-        this.speechBubble.textContent = 'Click to talk!';
-        
-        if (this.element) {
-            this.element.appendChild(this.speechBubble);
-        }
-    }
-
-    /**
-     * Update quest progress
-     */
-    updateQuestProgress(questId, amount = 1) {
-        if (!this.currentQuest || this.currentQuest.id !== questId) return;
-
-        this.currentQuest.progress += amount;
-        console.log(`Quest progress: ${this.currentQuest.progress}/${this.currentQuest.target}`);
-
-        // Check for quest completion
-        if (this.currentQuest.progress >= this.currentQuest.target) {
-            this.completeQuest();
-        }
-    }
-
-    /**
-     * Complete current quest
-     */
-    completeQuest() {
-        if (!this.currentQuest) return;
-
-        // Execute reward function
-        const rewardMessage = this.currentQuest.reward();
-        
-        // Update quest state
-        this.questCompleted = true;
-        
-        // Show completion dialog
-        const completionDialog = {
-            text: `Excellent work! ${rewardMessage}`,
-            options: [{ text: "Thanks!", responseIndex: -1 }]
-        };
-
-        // Trigger dialog update
-        const dialogEvent = new CustomEvent('show-dialog', {
-            detail: {
-                npc: this,
-                dialog: completionDialog
-            }
-        });
-        document.dispatchEvent(dialogEvent);
-
-        // Reset current quest
-        this.currentQuest = null;
-    }
-
-    /**
-     * Accept a new quest
-     */
-    acceptQuest(questId) {
-        const quest = this.availableQuests.find(q => q.id === questId);
-        if (quest) {
-            this.currentQuest = {...quest, progress: 0};
-            console.log(`Accepted quest: ${quest.title}`);
-        }
-    }
-
-    /**
-     * Override base render method
-     */
+    
     render(ctx) {
         if (!this.visible) return;
-
+        
         // Draw NPC as a triangle
-        ctx.fillStyle = this.questCompleted ? '#27ae60' : '#3498db';
+        ctx.fillStyle = '#3498db';
         ctx.beginPath();
         ctx.moveTo(this.x + this.width/2, this.y);
         ctx.lineTo(this.x, this.y + this.height);
         ctx.lineTo(this.x + this.width, this.y + this.height);
         ctx.closePath();
         ctx.fill();
-
+        
         // Draw name above NPC
         ctx.fillStyle = '#2c3e50';
         ctx.font = '12px Arial';
         ctx.textAlign = 'center';
         ctx.fillText(this.name, this.x + this.width/2, this.y - 5);
-
-        // Draw quest indicator if has active quest
-        if (this.currentQuest) {
-            ctx.fillStyle = '#f1c40f';
-            ctx.beginPath();
-            ctx.arc(this.x + this.width - 5, this.y + 5, 3, 0, Math.PI * 2);
-            ctx.fill();
-        }
     }
-
-    /**
-     * Override base onClick method
-     */
+    
     onClick(event) {
         if (!this.interactive || this.destroyed) return;
-
-        // Show appropriate dialog based on quest state
-        let dialog;
-        if (this.currentQuest) {
-            dialog = {
-                text: `Current progress: ${this.currentQuest.progress}/${this.currentQuest.target}`,
-                options: [{ text: "I'll keep working on it!", responseIndex: -1 }]
-            };
-        } else if (this.questCompleted) {
-            dialog = {
-                text: "Thanks for completing my quest!",
-                options: [{ text: "You're welcome!", responseIndex: -1 }]
-            };
-        } else {
-            dialog = this.dialogues[this.currentDialogIndex];
-        }
-
+        
+        console.log(`Talking to NPC: ${this.name}`);
+        
         // Trigger dialog event
         const dialogEvent = new CustomEvent('show-dialog', {
             detail: {
                 npc: this,
-                dialog: dialog
+                dialogIndex: this.currentDialogIndex
             }
         });
+        
         document.dispatchEvent(dialogEvent);
+    }
+    
+    getDialog(index) {
+        if (index >= 0 && index < this.dialogues.length) {
+            return this.dialogues[index];
+        }
+        return null;
+    }
+    
+    setCurrentDialog(index) {
+        this.currentDialogIndex = index;
     }
 }
 
+/**
+ * Game Object Manager
+ * Handles creation, updating, and rendering of all game objects
+ */
 class GameObjectManager {
-    // ... [Previous GameObjectManager code remains unchanged]
+    constructor() {
+        this.objects = [];
+        this.container = document.getElementById('game-container');
+    }
+    
+    /**
+     * Update all objects
+     */
+    update(deltaTime) {
+        // Update all non-destroyed objects
+        this.objects.forEach(obj => {
+            if (!obj.destroyed) {
+                obj.update(deltaTime);
+            }
+        });
+        
+        // Remove destroyed objects
+        this.objects = this.objects.filter(obj => !obj.destroyed);
+    }
+    
+    /**
+     * Render all objects
+     */
+    render(ctx) {
+        // Render all visible objects
+        this.objects.forEach(obj => {
+            if (obj.visible && !obj.destroyed) {
+                obj.render(ctx);
+            }
+        });
+    }
+    
+    /**
+     * Add a new object to the world
+     */
+    addObject(object) {
+        this.objects.push(object);
+        
+        // Create DOM element for the object
+        this.createDOMElement(object);
+        
+        return object;
+    }
+    
+    /**
+     * Create DOM element for an object
+     */
+    createDOMElement(object) {
+        // Skip if already has element or container not found
+        if (object.element || !this.container) return;
+        
+        // Create element
+        const element = document.createElement('div');
+        element.className = `game-object ${object.type}`;
+        element.dataset.id = object.id;
+        
+        // Set position and size
+        element.style.left = `${object.x}px`;
+        element.style.top = `${object.y}px`;
+        element.style.width = `${object.width}px`;
+        element.style.height = `${object.height}px`;
+        
+        // Add class for interactive objects
+        if (object.interactive) {
+            element.classList.add('interactable');
+        }
+        
+        // Add class for solid objects
+        if (object.solid) {
+            element.classList.add('solid');
+        }
+        
+        // Set initial damage visual if needed
+        if (object.health < object.maxHealth) {
+            const healthPercentage = object.health / object.maxHealth;
+            
+            if (healthPercentage <= 0.33) {
+                element.classList.add('damaged-2');
+            } else if (healthPercentage <= 0.66) {
+                element.classList.add('damaged-1');
+            }
+        }
+        
+        // Add click handler
+        element.addEventListener('click', (event) => {
+            object.onClick(event);
+        });
+        
+        // Store reference to element
+        object.element = element;
+        
+        // Add to container
+        this.container.appendChild(element);
+    }
+    
+    /**
+     * Find object by ID
+     */
+    getObjectById(id) {
+        return this.objects.find(obj => obj.id === id);
+    }
+    
+    /**
+     * Find objects at pixel coordinates
+     */
+    getObjectsAt(x, y) {
+        return this.objects.filter(obj => {
+            return !obj.destroyed &&
+                   x >= obj.x && x <= obj.x + obj.width &&
+                   y >= obj.y && y <= obj.y + obj.height;
+        });
+    }
+    
+    /**
+     * Spawn random objects around the world
+     */
+    spawnRandomObjects(count = 10) {
+        const objectTypes = ['wall', 'tree', 'collectible', 'npc', 'server', 'key'];
+        const npcNames = ['Guide', 'Trader', 'Explorer', 'Wizard', 'Blacksmith'];
+        
+        for (let i = 0; i < count; i++) {
+            const type = objectTypes[Math.floor(Math.random() * objectTypes.length)];
+            const x = Math.random() * (window.innerWidth - 50);
+            const y = Math.random() * (window.innerHeight - 50);
+            
+            let object;
+            
+            switch (type) {
+                case 'wall':
+                    const width = 30 + Math.random() * 70;
+                    const height = 30 + Math.random() * 70;
+                    object = new WallObject(x, y, width, height);
+                    break;
+                    
+                case 'tree':
+                    object = new TreeObject(x, y);
+                    break;
+                    
+                case 'collectible':
+                    object = new CollectibleObject(x, y, 'coin');
+                    break;
+                    
+                case 'npc':
+                    const name = npcNames[Math.floor(Math.random() * npcNames.length)];
+                    object = new NPCObject(x, y, name);
+                    break;
+                    
+                case 'server':
+                    object = new ServerObject(x, y);
+                    break;
+                    
+                case 'key':
+                    object = new KeyObject(x, y);
+                    break;
+                    
+                default:
+                    object = new GameObject(x, y, 30, 30, type);
+            }
+            
+            this.addObject(object);
+        }
+    }
+    
+    /**
+     * Remove all objects
+     */
+    clearAllObjects() {
+        // Destroy all objects
+        this.objects.forEach(obj => {
+            obj.destroy();
+        });
+        
+        // Clear array
+        this.objects = [];
+    }
+    
+    /**
+     * Serialize all objects for saving
+     */
+    serialize() {
+        return this.objects.map(obj => {
+            const data = obj.serialize();
+            data.className = obj.constructor.name;
+            return data;
+        });
+    }
+    
+    /**
+     * Deserialize objects from saved data
+     */
+    deserialize(data) {
+        if (!data || !Array.isArray(data)) return;
+        
+        // Clear existing objects
+        this.clearAllObjects();
+        
+        // Create objects from saved data
+        data.forEach(objData => {
+            if (objData.destroyed) return; // Skip destroyed objects
+            
+            let object;
+            
+            // Create appropriate object type
+            switch (objData.className) {
+                case 'WallObject':
+                    object = new WallObject(objData.x, objData.y, objData.width, objData.height);
+                    break;
+                    
+                case 'TreeObject':
+                    object = new TreeObject(objData.x, objData.y);
+                    break;
+                    
+                case 'CollectibleObject':
+                    object = new CollectibleObject(objData.x, objData.y, objData.itemType);
+                    break;
+                    
+                case 'NPCObject':
+                    object = new NPCObject(objData.x, objData.y, objData.name);
+                    break;
+                    
+                case 'ServerObject':
+                    object = new ServerObject(objData.x, objData.y);
+                    break;
+                    
+                case 'KeyObject':
+                    object = new KeyObject(objData.x, objData.y);
+                    break;
+                    
+                default:
+                    object = new GameObject(objData.x, objData.y, objData.width, objData.height, objData.type);
+            }
+            
+            // Copy saved properties
+            object.deserialize(objData);
+            
+            // Add to world
+            this.addObject(object);
+        });
+    }
 }
