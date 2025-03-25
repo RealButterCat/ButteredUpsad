@@ -271,7 +271,7 @@ class InteractionManager {
         if (this.gameEngine.objectManager) {
             const objects = this.gameEngine.objectManager.getObjectsAt(x, y);
             
-            // Find first draggable object
+            // Find first interactive object
             const draggable = objects.find(obj => obj.interactive);
             
             if (draggable) {
@@ -300,18 +300,45 @@ class InteractionManager {
             const x = event.clientX;
             const y = event.clientY;
             
-            // Update object position
-            this.draggingObject.x = x - this.dragOffsetX;
-            this.draggingObject.y = y - this.dragOffsetY;
+            // Calculate new position
+            const newX = x - this.dragOffsetX;
+            const newY = y - this.dragOffsetY;
             
             // Keep within bounds
-            this.draggingObject.x = Math.max(0, Math.min(window.innerWidth - this.draggingObject.width, this.draggingObject.x));
-            this.draggingObject.y = Math.max(0, Math.min(window.innerHeight - this.draggingObject.height, this.draggingObject.y));
+            const boundedX = Math.max(0, Math.min(window.innerWidth - this.draggingObject.width, newX));
+            const boundedY = Math.max(0, Math.min(window.innerHeight - this.draggingObject.height, newY));
             
-            // Update DOM element
-            if (this.draggingObject.element) {
-                this.draggingObject.element.style.left = `${this.draggingObject.x}px`;
-                this.draggingObject.element.style.top = `${this.draggingObject.y}px`;
+            // Check for collisions with other objects
+            const objectManager = this.gameEngine.objectManager;
+            if (objectManager) {
+                // Try to move the object with collision handling
+                const moved = objectManager.tryMoveObject(this.draggingObject, boundedX, boundedY);
+                
+                if (moved) {
+                    // Success - object moved, visual update is handled in the move method
+                    console.log(`Object ${this.draggingObject.id} moved to (${boundedX}, ${boundedY})`);
+                } else {
+                    // Couldn't move due to collisions, check if we hit any movable objects
+                    const collidingObjects = objectManager.objects.filter(obj => 
+                        obj !== this.draggingObject && 
+                        !obj.destroyed && 
+                        obj.solid &&
+                        this.checkCollision(boundedX, boundedY, this.draggingObject.width, 
+                                           this.draggingObject.height, obj)
+                    );
+                    
+                    // Try to push movable objects
+                    collidingObjects.forEach(obj => {
+                        if (obj.movable) {
+                            // Calculate push direction
+                            const pushDx = boundedX - this.draggingObject.x;
+                            const pushDy = boundedY - this.draggingObject.y;
+                            
+                            // Try to push the object
+                            obj.move(pushDx, pushDy, objectManager);
+                        }
+                    });
+                }
             }
         }
         
@@ -335,6 +362,18 @@ class InteractionManager {
     }
     
     /**
+     * Check collision between a point/rectangle and an object
+     */
+    checkCollision(x, y, width, height, obj) {
+        return (
+            x < obj.x + obj.width &&
+            x + width > obj.x &&
+            y < obj.y + obj.height &&
+            y + height > obj.y
+        );
+    }
+    
+    /**
      * Handle mouse up to end dragging
      */
     handleMouseUp(event) {
@@ -355,6 +394,27 @@ class InteractionManager {
                     const dropTarget = dropTargets[dropTargets.length - 1];
                     
                     console.log(`Dropped ${this.draggingObject.type} on ${dropTarget.type}`);
+                    
+                    // If the drop target is movable, try to push it
+                    if (dropTarget.movable) {
+                        // Try to push the object in the direction of the drag
+                        const pushDx = x - this.dragOffsetX - this.draggingObject.x;
+                        const pushDy = y - this.dragOffsetY - this.draggingObject.y;
+                        
+                        if (pushDx !== 0 || pushDy !== 0) {
+                            // Normalize the push direction
+                            const pushLength = Math.sqrt(pushDx * pushDx + pushDy * pushDy);
+                            const normalizedDx = pushDx / pushLength * 10; // Push by 10 pixels
+                            const normalizedDy = pushDy / pushLength * 10;
+                            
+                            // Try to push the object
+                            const pushed = dropTarget.move(normalizedDx, normalizedDy, this.gameEngine.objectManager);
+                            
+                            if (pushed) {
+                                console.log(`Pushed ${dropTarget.type} by (${normalizedDx}, ${normalizedDy})`);
+                            }
+                        }
+                    }
                     
                     // Handle object combinations
                     this.handleObjectCombination(this.draggingObject, dropTarget);
@@ -609,9 +669,33 @@ class InteractionManager {
                 targetObj.takeDamage(1);
                 break;
                 
+            case 'collectible_movable-block':
+                // Collectible pushes movable block
+                sourceObj.destroy();
+                
+                // Push the block slightly in a random direction
+                const pushX = (Math.random() - 0.5) * 40;
+                const pushY = (Math.random() - 0.5) * 40;
+                targetObj.move(pushX, pushY, this.gameEngine.objectManager);
+                break;
+                
             default:
-                // Generic interaction - source takes damage
-                sourceObj.takeDamage(1);
+                // If the target is movable, try to push it
+                if (targetObj.movable) {
+                    // Push the target away from the source
+                    const dx = targetObj.x - sourceObj.x;
+                    const dy = targetObj.y - sourceObj.y;
+                    
+                    // Normalize and scale
+                    const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+                    const pushX = (dx / distance) * 30;
+                    const pushY = (dy / distance) * 30;
+                    
+                    targetObj.move(pushX, pushY, this.gameEngine.objectManager);
+                } else {
+                    // Generic interaction - source takes damage
+                    sourceObj.takeDamage(1);
+                }
         }
     }
     
