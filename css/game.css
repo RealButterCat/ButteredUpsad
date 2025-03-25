@@ -124,8 +124,6 @@ footer .interactable:hover,
 .blog-post .interactable:hover,
 header.interactable:hover,
 footer.interactable:hover,
-nav.interactable:hover,
-nav .interactable:hover,
 #contact.interactable:hover,
 #contact .interactable:hover,
 form.interactable:hover,
@@ -133,6 +131,13 @@ form .interactable:hover,
 .ui-protected .interactable:hover,
 .ui-protected.interactable:hover {
     transform: none !important;
+}
+
+/* Partially protected elements keep hover effects but are protected from breaking/dragging */
+.ui-partial-protected.interactable:hover,
+.ui-partial-protected .interactable:hover {
+    /* Allow transform scale on hover */
+    transform: scale(1.05) !important;
 }
 
 /* Collectible Items */
@@ -338,7 +343,7 @@ form .interactable:hover,
 }
 
 /* Add visual hover indicator for interactive game elements */
-.game-mode .interactable:not(.ui-protected):hover::after {
+.game-mode .interactable:not(.ui-protected):not(.ui-partial-protected):hover::after {
     content: '';
     position: absolute;
     top: 0;
@@ -348,4 +353,10 @@ form .interactable:hover,
     border: 1px dashed rgba(231, 76, 60, 0.4);
     pointer-events: none;
     z-index: 50;
+}
+
+/* Navigation menu links should have a distinct hover effect */
+.nav-links a:hover {
+    color: #3498db !important;
+    transform: translateY(-2px) !important;
 }
