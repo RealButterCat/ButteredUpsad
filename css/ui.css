@@ -249,3 +249,26 @@ body.game-mode {
     border-radius: 3px;
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
 }
+
+/* Protected UI Elements */
+.ui-protected {
+    pointer-events: auto !important; /* Allow normal interaction */
+}
+
+.game-mode .ui-protected {
+    /* Visual indicator when debugging */
+    /* outline: 1px solid rgba(46, 204, 113, 0.2); */
+    position: relative !important; /* Prevent absolute positioning */
+    z-index: 1000 !important; /* Keep above game elements */
+}
+
+/* Disable game interaction styles for protected elements */
+.ui-protected .game-interactable:hover::before,
+.ui-protected.game-interactable:hover::before {
+    display: none !important;
+}
+
+.ui-protected .interactable:hover,
+.ui-protected.interactable:hover {
+    transform: none !important;
+}
