@@ -53,13 +53,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const successMessage = document.createElement('div');
             successMessage.className = 'success-message';
             successMessage.textContent = 'Message sent! We\'ll get back to you soon.';
+            successMessage.style.backgroundColor = '#2ecc71';
+            successMessage.style.color = 'white';
+            successMessage.style.padding = '10px';
+            successMessage.style.borderRadius = '4px';
+            successMessage.style.marginTop = '10px';
             
             // Insert after form
             contactForm.parentNode.insertBefore(successMessage, contactForm.nextSibling);
             
             // Remove after 3 seconds
             setTimeout(() => {
-                successMessage.remove();
+                successMessage.style.opacity = '0';
+                successMessage.style.transition = 'opacity 0.5s';
+                
+                setTimeout(() => {
+                    if (successMessage.parentNode) {
+                        successMessage.parentNode.removeChild(successMessage);
+                    }
+                }, 500);
             }, 3000);
         });
     }
@@ -84,28 +96,82 @@ document.addEventListener('DOMContentLoaded', () => {
         createMobileNavToggle();
     }
     
-    // Add some simple animations to page elements
-    const animatePageElements = () => {
-        const elements = document.querySelectorAll('h1, h2, .blog-post');
-        
-        elements.forEach((el, index) => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(20px)';
-            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            
-            // Stagger animations
-            setTimeout(() => {
-                el.style.opacity = '1';
-                el.style.transform = 'translateY(0)';
-            }, 100 * index);
-        });
-    };
+    // Add animations to hero section
+    animateHeroSection();
     
+    // Add some simple animations to page elements
     animatePageElements();
     
     // Add a subtle hint about the game mode
     setTimeout(addGameHint, 3000);
 });
+
+/**
+ * Animate the hero section
+ */
+function animateHeroSection() {
+    const heroSection = document.querySelector('.hero-section');
+    const heroTitle = document.querySelector('.hero-title');
+    const heroDescription = document.querySelector('.hero-description');
+    const heroButton = document.querySelector('.hero-cta');
+    
+    if (!heroSection || !heroTitle || !heroDescription || !heroButton) return;
+    
+    // Set initial states
+    heroTitle.style.opacity = '0';
+    heroTitle.style.transform = 'translateY(-20px)';
+    heroTitle.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+    
+    heroDescription.style.opacity = '0';
+    heroDescription.style.transform = 'translateY(-10px)';
+    heroDescription.style.transition = 'opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s';
+    
+    heroButton.style.opacity = '0';
+    heroButton.style.transform = 'scale(0.9)';
+    heroButton.style.transition = 'opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s';
+    
+    // Trigger animations after a short delay
+    setTimeout(() => {
+        heroTitle.style.opacity = '1';
+        heroTitle.style.transform = 'translateY(0)';
+        
+        heroDescription.style.opacity = '1';
+        heroDescription.style.transform = 'translateY(0)';
+        
+        heroButton.style.opacity = '1';
+        heroButton.style.transform = 'scale(1)';
+    }, 100);
+    
+    // Add subtle background animation
+    const heroBg = document.querySelector('.hero-bg');
+    if (heroBg) {
+        heroBg.style.transition = 'opacity 2s ease-in-out';
+        
+        // Subtle pulse animation for the background
+        setInterval(() => {
+            heroBg.style.opacity = (parseFloat(getComputedStyle(heroBg).opacity) === 0.1) ? '0.15' : '0.1';
+        }, 4000);
+    }
+}
+
+/**
+ * Animate page elements
+ */
+function animatePageElements() {
+    const elements = document.querySelectorAll('h1:not(.hero-title), h2, .blog-post');
+    
+    elements.forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        
+        // Stagger animations
+        setTimeout(() => {
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }, 100 * index);
+    });
+}
 
 /**
  * Add a subtle hint that encourages users to discover game mode
@@ -121,7 +187,7 @@ function addGameHint() {
     hintElement.className = 'game-hint';
     hintElement.innerHTML = `
         <div class="hint-content">
-            <p>Psst! Try pressing <kbd>Ctrl</kbd>+<kbd>G</kbd> on this page...</p>
+            <p>Psst! Try pressing <kbd>Ctrl</kbd>+<kbd>G</kbd> or click "Start Adventure" to begin!</p>
             <button class="hint-close">×</button>
         </div>
     `;
@@ -136,7 +202,7 @@ function addGameHint() {
             color: white;
             padding: 12px;
             border-radius: 5px;
-            max-width: 220px;
+            max-width: 250px;
             font-size: 13px;
             z-index: 1000;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
