@@ -30,7 +30,7 @@
 .game-object {
     position: absolute;
     z-index: 6;
-    transition: transform 0.1s ease-out;
+    transition: transform 0.5s ease-out;
 }
 
 /* Player Character */
@@ -323,4 +323,15 @@ button.game-destroyed, input.game-destroyed {
 
 *[draggable="true"]:active, .interactable:active {
     cursor: grabbing;
+}
+
+/* Object destruction animation */
+.destroying {
+    animation: destroy-object 0.5s ease-out forwards;
+}
+
+@keyframes destroy-object {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.5); opacity: 0.5; }
+    100% { transform: scale(0); opacity: 0; }
 }
