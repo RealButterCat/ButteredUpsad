@@ -60,9 +60,9 @@ class InteractionManager {
      * Initialize interactions with website elements
      */
     initializeWebsiteInteractions() {
-        // Define protected elements that should not be draggable or breakable
-        const protectedSelectors = [
-            'header', 'footer', 'nav', '.nav-links', '.nav-links *', 
+        // Define fully protected elements (no interaction, no hover effects)
+        const fullyProtectedSelectors = [
+            'header', 'footer', 
             '#game-container', '#game-container *',
             '#start-game', '#hero-start-game',
             '#inventory-panel', '#dialog-box',
@@ -73,6 +73,11 @@ class InteractionManager {
             'form', 'form *'
         ];
         
+        // Define partially protected elements (allow hover, prevent breaking/dragging)
+        const partiallyProtectedSelectors = [
+            'nav', '.nav-links', '.nav-links *'
+        ];
+        
         // Add interactive class to ALL elements that can be affected by the game
         const interactiveSelectors = [
             'h1', 'h2', 'p', 'button', 'input', 'textarea',
@@ -80,11 +85,17 @@ class InteractionManager {
             'span', 'a', 'ul', 'ol', 'li', 'label'
         ];
         
-        // First add ui-protected class to all protected elements
-        const protectedElements = document.querySelectorAll(protectedSelectors.join(','));
-        protectedElements.forEach(element => {
+        // First add protection classes to elements
+        const fullyProtectedElements = document.querySelectorAll(fullyProtectedSelectors.join(','));
+        fullyProtectedElements.forEach(element => {
             element.classList.add('ui-protected');
-            console.log('Protected UI element:', element.tagName, element.id || '');
+            console.log('Fully protected UI element:', element.tagName, element.id || '');
+        });
+        
+        const partiallyProtectedElements = document.querySelectorAll(partiallyProtectedSelectors.join(','));
+        partiallyProtectedElements.forEach(element => {
+            element.classList.add('ui-partial-protected');
+            console.log('Partially protected UI element:', element.tagName, element.id || '');
         });
         
         // Then get all potential interactive elements
@@ -97,7 +108,7 @@ class InteractionManager {
             // Skip body and html elements
             if (element === document.body || element === document.documentElement) return;
             
-            // Skip protected elements and their children
+            // Skip fully protected elements and their children
             if (element.classList.contains('ui-protected') || element.closest('.ui-protected')) {
                 return;
             }
@@ -148,7 +159,10 @@ class InteractionManager {
             const element = document.getElementById(id);
             if (element) {
                 // Skip protected elements
-                if (element.classList.contains('ui-protected') || element.closest('.ui-protected')) {
+                if (element.classList.contains('ui-protected') || 
+                    element.closest('.ui-protected') ||
+                    element.classList.contains('ui-partial-protected') ||
+                    element.closest('.ui-partial-protected')) {
                     return;
                 }
                 
@@ -170,7 +184,10 @@ class InteractionManager {
             const element = document.getElementById(id);
             if (element) {
                 // Skip protected elements
-                if (element.classList.contains('ui-protected') || element.closest('.ui-protected')) {
+                if (element.classList.contains('ui-protected') || 
+                    element.closest('.ui-protected') ||
+                    element.classList.contains('ui-partial-protected') ||
+                    element.closest('.ui-partial-protected')) {
                     return;
                 }
                 
@@ -225,8 +242,11 @@ class InteractionManager {
             }
         }
         
-        // Don't allow dragging protected UI elements
-        if (target.classList.contains('ui-protected') || target.closest('.ui-protected')) {
+        // Don't allow dragging protected UI elements (both fully and partially protected)
+        if (target.classList.contains('ui-protected') || 
+            target.closest('.ui-protected') ||
+            target.classList.contains('ui-partial-protected') ||
+            target.closest('.ui-partial-protected')) {
             console.log('Prevented dragging of protected UI element');
             return;
         }
@@ -503,9 +523,15 @@ class InteractionManager {
             }
         }
         
-        // Don't interact with protected UI elements
+        // Don't interact with fully protected UI elements
         if (target && (target.classList.contains('ui-protected') || target.closest('.ui-protected'))) {
-            console.log('Prevented interaction with protected UI element');
+            console.log('Prevented interaction with fully protected UI element');
+            return;
+        }
+        
+        // Don't interact with partially protected UI elements
+        if (target && (target.classList.contains('ui-partial-protected') || target.closest('.ui-partial-protected'))) {
+            console.log('Prevented interaction with partially protected UI element');
             return;
         }
         
@@ -567,8 +593,11 @@ class InteractionManager {
     damageWebsiteElement(element) {
         if (!element.dataset.gameHealth) return;
         
-        // Don't damage protected UI elements
-        if (element.classList.contains('ui-protected') || element.closest('.ui-protected')) {
+        // Don't damage protected UI elements (both fully and partially protected)
+        if (element.classList.contains('ui-protected') || 
+            element.closest('.ui-protected') ||
+            element.classList.contains('ui-partial-protected') ||
+            element.closest('.ui-partial-protected')) {
             console.log('Prevented damaging protected UI element');
             return;
         }
