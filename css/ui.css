@@ -272,3 +272,31 @@ body.game-mode {
 .ui-protected.interactable:hover {
     transform: none !important;
 }
+
+/* Partially Protected UI Elements - allow hover but prevent breaking/dragging */
+.ui-partial-protected {
+    pointer-events: auto !important; /* Allow normal interaction */
+}
+
+.game-mode .ui-partial-protected {
+    position: relative !important; /* Prevent absolute positioning */
+    z-index: 999 !important; /* Keep above most elements but below fully protected ones */
+}
+
+/* Ensure navigation elements are consistently styled */
+nav {
+    /* Critical for navigation positioning */
+    position: static !important;
+}
+
+.nav-links {
+    /* Ensure navigation links have consistent positioning */
+    position: static !important;
+    z-index: 50;
+}
+
+/* Make sure nav links are always clickable */
+.nav-links a {
+    position: relative;
+    z-index: 1002;
+}
