@@ -45,6 +45,21 @@ The game features NPCs (Non-Player Characters) with the following behaviors:
 - **Dialog Options**: NPCs provide dialog trees with multiple response options stored in JSON format
 - **Simple AI**: No complex pathfinding, just simple random movement to keep NPCs dynamic without blocking critical paths
 
+## UI/UX Features
+
+The game incorporates several subtle UI/UX features to enhance the experience:
+
+- **Normal Website Appearance**: The game maintains the look and feel of a normal website until game mode is activated
+- **Hidden Mechanics**: Game mechanics remain hidden until explicitly triggered with Ctrl+G or the "Start Game" button
+- **Subtle Animations**: Hover effects and transitions provide visual feedback without being intrusive
+- **Persistent Preferences**: User settings and game state are saved using localStorage
+- **Auto-Save System**: Game progress is automatically saved at regular intervals
+- **Game Mode Indicator**: A subtle indicator shows when game mode is active
+- **Keyboard Controls Helper**: An unobtrusive controls reference is available in game mode
+- **Contextual Tooltips**: Helpful tooltips appear at appropriate moments to guide new players
+- **Non-Intrusive UI**: Game UI elements are minimal and fade away when not in use
+- **Responsive Transitions**: Smooth transitions between game and normal website modes
+
 ## License
 
 MIT
