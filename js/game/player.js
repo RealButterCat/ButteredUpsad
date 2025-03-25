@@ -11,10 +11,12 @@ class Player {
         this.width = 30;
         this.height = 30;
         
-        // Movement
-        this.speed = 200; // pixels per second
-        this.moveX = 0;
-        this.moveY = 0;
+        // Movement physics
+        this.velocity = { x: 0, y: 0 };
+        this.acceleration = { x: 0, y: 0 };
+        this.maxSpeed = 350; // Maximum speed in pixels per second
+        this.accelerationRate = 1500; // Pixels per second squared
+        this.friction = 0.85; // Friction coefficient (0-1 where 1 = no friction)
         
         // Player state
         this.health = 100;
@@ -50,33 +52,111 @@ class Player {
      * Update player state
      */
     update(deltaTime) {
-        // Reset movement vector
-        this.moveX = 0;
-        this.moveY = 0;
+        // Set acceleration based on input
+        this.acceleration.x = 0;
+        this.acceleration.y = 0;
         
-        // Handle movement input
-        if (this.keys.up) this.moveY -= 1;
-        if (this.keys.down) this.moveY += 1;
-        if (this.keys.left) this.moveX -= 1;
-        if (this.keys.right) this.moveX += 1;
+        // Handle movement input and apply acceleration
+        if (this.keys.up) this.acceleration.y -= this.accelerationRate;
+        if (this.keys.down) this.acceleration.y += this.accelerationRate;
+        if (this.keys.left) this.acceleration.x -= this.accelerationRate;
+        if (this.keys.right) this.acceleration.x += this.accelerationRate;
         
-        // Normalize diagonal movement
-        if (this.moveX !== 0 && this.moveY !== 0) {
-            const length = Math.sqrt(this.moveX * this.moveX + this.moveY * this.moveY);
-            this.moveX /= length;
-            this.moveY /= length;
+        // Normalize diagonal acceleration
+        if (this.acceleration.x !== 0 && this.acceleration.y !== 0) {
+            const length = Math.sqrt(this.acceleration.x * this.acceleration.x + this.acceleration.y * this.acceleration.y);
+            this.acceleration.x = (this.acceleration.x / length) * this.accelerationRate;
+            this.acceleration.y = (this.acceleration.y / length) * this.accelerationRate;
         }
         
-        // Apply movement
-        this.x += this.moveX * this.speed * deltaTime;
-        this.y += this.moveY * this.speed * deltaTime;
+        // Apply acceleration to velocity
+        this.velocity.x += this.acceleration.x * deltaTime;
+        this.velocity.y += this.acceleration.y * deltaTime;
+        
+        // Apply friction
+        this.velocity.x *= this.friction;
+        this.velocity.y *= this.friction;
+        
+        // Cap velocity to max speed
+        const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
+        if (speed > this.maxSpeed) {
+            this.velocity.x = (this.velocity.x / speed) * this.maxSpeed;
+            this.velocity.y = (this.velocity.y / speed) * this.maxSpeed;
+        }
+        
+        // Stop small movements (prevents sliding forever)
+        if (Math.abs(this.velocity.x) < 5) this.velocity.x = 0;
+        if (Math.abs(this.velocity.y) < 5) this.velocity.y = 0;
+        
+        // Store previous position for collision resolution
+        const prevX = this.x;
+        const prevY = this.y;
+        
+        // Apply velocity to position (move X and Y separately for better collision handling)
+        this.x += this.velocity.x * deltaTime;
+        
+        // Check for collisions on X axis
+        if (gameEngine && gameEngine.objectManager) {
+            const collidingObjectsX = this.getCollidingObjects();
+            
+            if (collidingObjectsX.length > 0) {
+                // Revert X position and stop X velocity
+                this.x = prevX;
+                this.velocity.x = 0;
+            }
+        }
+        
+        // Now move Y and check collisions
+        this.y += this.velocity.y * deltaTime;
+        
+        // Check for collisions on Y axis
+        if (gameEngine && gameEngine.objectManager) {
+            const collidingObjectsY = this.getCollidingObjects();
+            
+            if (collidingObjectsY.length > 0) {
+                // Revert Y position and stop Y velocity
+                this.y = prevY;
+                this.velocity.y = 0;
+            }
+        }
         
         // Keep player within bounds
-        this.x = Math.max(0, Math.min(window.innerWidth - this.width, this.x));
-        this.y = Math.max(0, Math.min(window.innerHeight - this.height, this.y));
+        this.enforceBoundaries();
         
         // Update DOM element position
         this.updateElementPosition();
+    }
+    
+    /**
+     * Keep player within screen boundaries
+     */
+    enforceBoundaries() {
+        if (this.x < 0) {
+            this.x = 0;
+            this.velocity.x = 0;
+        } else if (this.x > window.innerWidth - this.width) {
+            this.x = window.innerWidth - this.width;
+            this.velocity.x = 0;
+        }
+        
+        if (this.y < 0) {
+            this.y = 0;
+            this.velocity.y = 0;
+        } else if (this.y > window.innerHeight - this.height) {
+            this.y = window.innerHeight - this.height;
+            this.velocity.y = 0;
+        }
+    }
+    
+    /**
+     * Get all objects currently colliding with the player
+     */
+    getCollidingObjects() {
+        if (!gameEngine || !gameEngine.objectManager) return [];
+        
+        return gameEngine.objectManager.objects.filter(obj => {
+            return obj.solid && !obj.destroyed && this.collidesWith(obj);
+        });
     }
     
     /**
@@ -89,13 +169,13 @@ class Player {
         ctx.arc(this.x + this.width/2, this.y + this.height/2 + 5, this.width/2 - 2, 0, Math.PI * 2);
         ctx.fill();
         
-        // Draw player using canvas
+        // Draw player using canvas - standard is a circle
         ctx.fillStyle = '#e74c3c';
         ctx.beginPath();
         ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
         ctx.fill();
         
-        // Draw glow effect (optional, for canvas)
+        // Draw glow effect
         ctx.save();
         ctx.globalAlpha = 0.2;
         ctx.beginPath();
@@ -103,6 +183,22 @@ class Player {
         ctx.fillStyle = '#e74c3c';
         ctx.fill();
         ctx.restore();
+        
+        // Optional: Draw direction indicator if moving
+        if (Math.abs(this.velocity.x) > 5 || Math.abs(this.velocity.y) > 5) {
+            const dir = Math.atan2(this.velocity.y, this.velocity.x);
+            const indicatorLength = 15;
+            
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width/2, this.y + this.height/2);
+            ctx.lineTo(
+                this.x + this.width/2 + Math.cos(dir) * indicatorLength,
+                this.y + this.height/2 + Math.sin(dir) * indicatorLength
+            );
+            ctx.stroke();
+        }
     }
     
     /**
@@ -248,6 +344,7 @@ class Player {
         return {
             x: this.x,
             y: this.y,
+            velocity: this.velocity,
             health: this.health,
             maxHealth: this.maxHealth,
             level: this.level,
@@ -262,6 +359,7 @@ class Player {
     deserialize(data) {
         this.x = data.x || this.x;
         this.y = data.y || this.y;
+        this.velocity = data.velocity || { x: 0, y: 0 };
         this.health = data.health || this.health;
         this.maxHealth = data.maxHealth || this.maxHealth;
         this.level = data.level || this.level;
