@@ -90,6 +90,12 @@ class DialogManager {
                 const optionButton = document.createElement('button');
                 optionButton.textContent = option.text;
                 optionButton.dataset.responseIndex = option.responseIndex;
+                
+                // Store action in dataset if it exists
+                if (option.action) {
+                    optionButton.dataset.hasAction = 'true';
+                }
+                
                 optionButton.addEventListener('click', this.handleOptionClick);
                 
                 this.dialogOptions.appendChild(optionButton);
@@ -142,6 +148,18 @@ class DialogManager {
     handleOptionClick(event) {
         const button = event.currentTarget;
         const responseIndex = parseInt(button.dataset.responseIndex, 10);
+        
+        // Check if option has an action
+        const hasAction = button.dataset.hasAction === 'true';
+        if (hasAction && this.currentDialog && this.currentDialog.options) {
+            const option = this.currentDialog.options.find(opt => 
+                parseInt(opt.responseIndex, 10) === responseIndex
+            );
+            
+            if (option && typeof option.action === 'function') {
+                option.action();
+            }
+        }
         
         // Close dialog if responseIndex is negative
         if (responseIndex < 0) {
