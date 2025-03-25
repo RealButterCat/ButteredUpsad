@@ -36,6 +36,11 @@ function initGame() {
         if (event.key.toLowerCase() === 'g' && event.ctrlKey) {
             toggleGame();
         }
+        
+        // Handle Tab key for inventory (prevent default behavior)
+        if (event.key === 'Tab' && gameEngine && gameEngine.isRunning) {
+            event.preventDefault();
+        }
     });
 }
 
@@ -69,8 +74,46 @@ function toggleGame() {
             startGameButton.textContent = 'Stop Game';
         }
         
+        // Show the keyboard controls info
+        showKeyboardControlsInfo();
+        
         console.log('Game started');
     }
+}
+
+/**
+ * Show a temporary message with keyboard controls
+ */
+function showKeyboardControlsInfo() {
+    // Create a tooltip for controls
+    const tooltip = document.createElement('div');
+    tooltip.className = 'controls-tooltip';
+    tooltip.innerHTML = `
+        <h4>Keyboard Controls</h4>
+        <ul>
+            <li><kbd>Tab</kbd> - Toggle inventory</li>
+            <li><kbd>Ctrl</kbd>+<kbd>S</kbd> - View stats</li>
+            <li><kbd>WASD</kbd> or <kbd>↑↓←→</kbd> - Move</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> - Debug reset</li>
+        </ul>
+    `;
+    
+    document.body.appendChild(tooltip);
+    
+    // Fade in
+    setTimeout(() => {
+        tooltip.style.opacity = '1';
+    }, 100);
+    
+    // Fade out and remove after 5 seconds
+    setTimeout(() => {
+        tooltip.style.opacity = '0';
+        setTimeout(() => {
+            if (tooltip.parentNode) {
+                tooltip.parentNode.removeChild(tooltip);
+            }
+        }, 500);
+    }, 5000);
 }
 
 /**
@@ -180,6 +223,52 @@ const injectGameStyles = () => {
             opacity: 0.7;
             transform: scale(1.1);
             z-index: 100 !important;
+        }
+        
+        /* Controls tooltip */
+        .controls-tooltip {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background-color: rgba(44, 62, 80, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: opacity 0.5s;
+            max-width: 250px;
+        }
+        
+        .controls-tooltip h4 {
+            margin-bottom: 10px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 5px;
+        }
+        
+        .controls-tooltip ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .controls-tooltip li {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .controls-tooltip kbd {
+            display: inline-block;
+            padding: 2px 4px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #f9f9f9;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+            margin: 0 2px;
         }
     `;
     
