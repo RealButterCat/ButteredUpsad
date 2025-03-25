@@ -9,7 +9,7 @@ An interactive website RPG with maximal player freedom. This project transforms 
 - Physics and collision detection
 - Persistent world state (changes remain after page refresh)
 - Player inventory and progression system
-- NPCs and quest system
+- NPCs with random wandering behavior and dialog system
 - Website reactions to gameplay events
 
 ## Technologies Used
@@ -34,6 +34,16 @@ This project is being developed in phases:
 2. Interaction Systems - Physics, collision, and universal interaction
 3. RPG Mechanics - Inventory, quests, and NPCs
 4. Polish & Expansion - Sound, animations, and possible multiplayer
+
+## NPC AI System
+
+The game features NPCs (Non-Player Characters) with the following behaviors:
+
+- **Random Wandering**: NPCs move around the world randomly, changing direction every few seconds
+- **Boundary Detection**: NPCs won't wander off-screen and will reverse direction when hitting boundaries
+- **Dialog System**: NPCs pause movement during conversations and resume wandering afterward
+- **Dialog Options**: NPCs provide dialog trees with multiple response options stored in JSON format
+- **Simple AI**: No complex pathfinding, just simple random movement to keep NPCs dynamic without blocking critical paths
 
 ## License
 
