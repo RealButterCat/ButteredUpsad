@@ -12,6 +12,21 @@ class GameEngine {
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
         
+        // Player stats
+        this.playerStats = {
+            blocksBroken: 0,
+            stepsTaken: 0,
+            itemsCollected: 0,
+            itemsDropped: 0,
+            itemsUsed: 0,
+            coinsUsed: 0,
+            keysUsed: 0,
+            specialItemsUsed: 0,
+            distanceTraveled: 0,
+            areaExplored: 0,
+            interactionsPerformed: 0
+        };
+        
         // Game systems
         this.player = null;
         this.world = null;
@@ -26,6 +41,8 @@ class GameEngine {
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
         this.handleResize = this.handleResize.bind(this);
+        this.updateStats = this.updateStats.bind(this);
+        this.logStats = this.logStats.bind(this);
         
         // Event listeners
         window.addEventListener('resize', this.handleResize);
@@ -51,6 +68,9 @@ class GameEngine {
         this.inventoryManager = new InventoryManager();
         this.dialogManager = new DialogManager();
         
+        // Reset player stats
+        this.resetStats();
+        
         // Load saved game state if exists
         this.loadGameState();
         
@@ -65,7 +85,11 @@ class GameEngine {
         // Initialize interactions
         this.interactionManager.initialize();
         
+        // Set up stat logging interval (every 30 seconds)
+        this.statLoggingInterval = setInterval(this.logStats, 30000);
+        
         console.log('Game engine started!');
+        console.log('Player stats are being tracked and logged to console.');
     }
     
     /**
@@ -88,6 +112,14 @@ class GameEngine {
         
         // Clean up
         this.interactionManager.cleanup();
+        
+        // Clear stat logging interval
+        if (this.statLoggingInterval) {
+            clearInterval(this.statLoggingInterval);
+        }
+        
+        // Log final stats
+        this.logStats();
         
         console.log('Game engine stopped!');
     }
@@ -119,14 +151,80 @@ class GameEngine {
      * Update game state
      */
     update(deltaTime) {
+        // Track previous player position for step detection
+        let prevX = 0;
+        let prevY = 0;
+        
+        if (this.player) {
+            prevX = this.player.x;
+            prevY = this.player.y;
+        }
+        
         // Update player
         if (this.player) {
             this.player.update(deltaTime);
+            
+            // Track steps taken and distance traveled
+            if (prevX !== this.player.x || prevY !== this.player.y) {
+                const dx = this.player.x - prevX;
+                const dy = this.player.y - prevY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Only count as a step if moved more than 5 pixels
+                if (distance > 5) {
+                    this.playerStats.stepsTaken++;
+                    this.playerStats.distanceTraveled += distance;
+                }
+            }
         }
         
         // Update world objects
         if (this.objectManager) {
             this.objectManager.update(deltaTime);
+        }
+        
+        // Update stats periodically
+        this.updateStats(deltaTime);
+    }
+    
+    /**
+     * Update player statistics
+     */
+    updateStats(deltaTime) {
+        // Nothing additional to update here, as most stats are updated
+        // in their respective interaction points
+    }
+    
+    /**
+     * Log player stats to console
+     */
+    logStats() {
+        console.log('--- PLAYER STATS ---');
+        Object.entries(this.playerStats).forEach(([stat, value]) => {
+            console.log(`${stat}: ${value}`);
+        });
+        console.log('-------------------');
+    }
+    
+    /**
+     * Reset player stats
+     */
+    resetStats() {
+        // Reset all stats to zero
+        Object.keys(this.playerStats).forEach(stat => {
+            this.playerStats[stat] = 0;
+        });
+    }
+    
+    /**
+     * Increment a specific player stat
+     */
+    incrementStat(statName, amount = 1) {
+        if (this.playerStats[statName] !== undefined) {
+            this.playerStats[statName] += amount;
+        } else {
+            // Create new stat if it doesn't exist
+            this.playerStats[statName] = amount;
         }
     }
     
@@ -180,7 +278,8 @@ class GameEngine {
             player: this.player ? this.player.serialize() : null,
             world: this.world ? this.world.serialize() : null,
             objects: this.objectManager ? this.objectManager.serialize() : null,
-            inventory: this.inventoryManager ? this.inventoryManager.serialize() : null
+            inventory: this.inventoryManager ? this.inventoryManager.serialize() : null,
+            playerStats: this.playerStats
         };
         
         localStorage.setItem('butteredUpsad_gameState', JSON.stringify(gameState));
@@ -217,7 +316,13 @@ class GameEngine {
                     this.inventoryManager.deserialize(gameState.inventory);
                 }
                 
+                // Load player stats
+                if (gameState.playerStats) {
+                    this.playerStats = { ...this.playerStats, ...gameState.playerStats };
+                }
+                
                 console.log('Game state loaded!');
+                this.logStats(); // Log the loaded stats
             } catch (error) {
                 console.error('Error loading game state:', error);
             }
@@ -230,6 +335,9 @@ class GameEngine {
     resetGameState() {
         localStorage.removeItem('butteredUpsad_gameState');
         console.log('Game state reset!');
+        
+        // Reset player stats
+        this.resetStats();
         
         // Reload the page to start fresh
         window.location.reload();
