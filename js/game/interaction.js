@@ -15,12 +15,24 @@ class InteractionManager {
         this.dragOffsetY = 0;
         this.clickedElements = [];
         
+        // DOM Element dragging state
+        this.draggingElement = null;
+        this.elementDragOffsetX = 0;
+        this.elementDragOffsetY = 0;
+        
+        // World state for persistence
+        this.worldState = this.loadWorldState() || {
+            brokenElements: [],
+            movedElements: {}
+        };
+        
         // Bind methods
         this.handleClick = this.handleClick.bind(this);
         this.handleMouseDown = this.handleMouseDown.bind(this);
         this.handleMouseMove = this.handleMouseMove.bind(this);
         this.handleMouseUp = this.handleMouseUp.bind(this);
         this.handleInteractiveElements = this.handleInteractiveElements.bind(this);
+        this.handleElementMouseDown = this.handleElementMouseDown.bind(this);
     }
     
     /**
@@ -38,6 +50,9 @@ class InteractionManager {
         // Initialize interaction with website elements
         this.initializeWebsiteInteractions();
         
+        // Restore broken/moved elements from world state
+        this.restoreWorldState();
+        
         console.log('Interaction manager initialized');
     }
     
@@ -45,10 +60,12 @@ class InteractionManager {
      * Initialize interactions with website elements
      */
     initializeWebsiteInteractions() {
-        // Add interactive class to elements that can be affected by the game
+        // Add interactive class to ALL elements that can be affected by the game
         const interactiveSelectors = [
             'h1', 'h2', 'p', 'button', 'input', 'textarea',
-            '.blog-post', '.nav-links li', 'form', 'img'
+            '.blog-post', '.nav-links li', 'form', 'img',
+            'nav', 'footer', 'header', 'div', 'section', 'article',
+            'span', 'a', 'ul', 'ol', 'li', 'label'
         ];
         
         const websiteElements = document.querySelectorAll(interactiveSelectors.join(','));
@@ -57,8 +74,16 @@ class InteractionManager {
             // Skip elements that are part of the game
             if (element.closest('#game-container')) return;
             
-            // Add game-interactable class for styling
-            element.classList.add('game-interactable');
+            // Skip body and html elements
+            if (element === document.body || element === document.documentElement) return;
+            
+            // Add interactable class for styling and interaction
+            element.classList.add('game-interactable', 'interactable');
+            
+            // Generate a unique ID if not present
+            if (!element.id) {
+                element.id = `interactable-${Math.random().toString(36).substr(2, 9)}`;
+            }
             
             // Add data attribute for interaction type
             const tagName = element.tagName.toLowerCase();
@@ -74,14 +99,126 @@ class InteractionManager {
                 interactionType = 'content';
             } else if (tagName === 'img') {
                 interactionType = 'image';
+            } else if (tagName === 'nav' || tagName === 'ul' || tagName === 'li' || tagName === 'a') {
+                interactionType = 'navigation';
             }
             
             element.dataset.gameInteraction = interactionType;
             
-            // Add health property for breakable elements
+            // Add health property for breakable elements (all elements are breakable)
             element.dataset.gameHealth = '3';
             element.dataset.gameMaxHealth = '3';
+            
+            // Add mousedown listener for dragging
+            element.addEventListener('mousedown', this.handleElementMouseDown);
         });
+    }
+    
+    /**
+     * Restore the world state from localStorage
+     */
+    restoreWorldState() {
+        // Handle broken elements
+        this.worldState.brokenElements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.dataset.gameHealth = '0';
+                element.classList.add('game-destroyed');
+                
+                // Apply broken state visuals
+                if (element.tagName.toLowerCase() === 'p') {
+                    element.textContent = '[redacted]';
+                } else if (element.tagName.toLowerCase() === 'img') {
+                    element.style.opacity = '0.2';
+                    element.style.filter = 'grayscale(100%)';
+                }
+            }
+        });
+        
+        // Handle moved elements
+        Object.entries(this.worldState.movedElements).forEach(([id, position]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                // Set element to absolute position if not already
+                const computedStyle = window.getComputedStyle(element);
+                if (computedStyle.position !== 'absolute') {
+                    element.style.position = 'absolute';
+                }
+                
+                // Apply saved position
+                element.style.left = `${position.x}px`;
+                element.style.top = `${position.y}px`;
+            }
+        });
+    }
+    
+    /**
+     * Load world state from localStorage
+     */
+    loadWorldState() {
+        const savedState = localStorage.getItem('butteredUpsad_worldState');
+        return savedState ? JSON.parse(savedState) : null;
+    }
+    
+    /**
+     * Save world state to localStorage
+     */
+    saveWorldState() {
+        localStorage.setItem('butteredUpsad_worldState', JSON.stringify(this.worldState));
+    }
+    
+    /**
+     * Handle mousedown on DOM elements for dragging
+     */
+    handleElementMouseDown(event) {
+        // Only process if game is running
+        if (!this.gameEngine.isRunning) return;
+        
+        // Prevent default behavior to avoid text selection
+        event.preventDefault();
+        
+        // Get the interactable element
+        let target = event.target;
+        
+        // Find closest interactable parent
+        while (target && !target.classList.contains('interactable')) {
+            target = target.parentElement;
+            
+            // Stop if reached game container or document body
+            if (!target || target === this.container || target === document.body) {
+                return;
+            }
+        }
+        
+        // Start dragging the element
+        this.draggingElement = target;
+        
+        // Calculate offsets from the mouse position to the element's top-left corner
+        const rect = target.getBoundingClientRect();
+        this.elementDragOffsetX = event.clientX - rect.left;
+        this.elementDragOffsetY = event.clientY - rect.top;
+        
+        // Set position to absolute if not already
+        const computedStyle = window.getComputedStyle(target);
+        if (computedStyle.position !== 'absolute') {
+            // Save the original position information for reference
+            target.dataset.originalPosition = computedStyle.position;
+            target.dataset.originalLeft = computedStyle.left;
+            target.dataset.originalTop = computedStyle.top;
+            
+            // Convert to absolute positioning
+            target.style.position = 'absolute';
+            target.style.left = `${rect.left}px`;
+            target.style.top = `${rect.top}px`;
+            target.style.width = `${rect.width}px`;
+            target.style.zIndex = '1000'; // Bring to front
+        }
+        
+        // Add visual feedback
+        target.classList.add('dragging');
+        
+        // Stop event propagation
+        event.stopPropagation();
     }
     
     /**
@@ -121,7 +258,7 @@ class InteractionManager {
     }
     
     /**
-     * Handle mouse down for dragging
+     * Handle mouse down for dragging game objects
      */
     handleMouseDown(event) {
         // Only process if game is running
@@ -135,7 +272,7 @@ class InteractionManager {
             const objects = this.gameEngine.objectManager.getObjectsAt(x, y);
             
             // Find first draggable object
-            const draggable = objects.find(obj => obj.interactive && !obj.solid);
+            const draggable = objects.find(obj => obj.interactive);
             
             if (draggable) {
                 // Start dragging
@@ -155,27 +292,45 @@ class InteractionManager {
     }
     
     /**
-     * Handle mouse move for dragging
+     * Handle mouse move for dragging both game objects and DOM elements
      */
     handleMouseMove(event) {
-        // Only process if currently dragging
-        if (!this.draggingObject) return;
+        // Handle game object dragging
+        if (this.draggingObject) {
+            const x = event.clientX;
+            const y = event.clientY;
+            
+            // Update object position
+            this.draggingObject.x = x - this.dragOffsetX;
+            this.draggingObject.y = y - this.dragOffsetY;
+            
+            // Keep within bounds
+            this.draggingObject.x = Math.max(0, Math.min(window.innerWidth - this.draggingObject.width, this.draggingObject.x));
+            this.draggingObject.y = Math.max(0, Math.min(window.innerHeight - this.draggingObject.height, this.draggingObject.y));
+            
+            // Update DOM element
+            if (this.draggingObject.element) {
+                this.draggingObject.element.style.left = `${this.draggingObject.x}px`;
+                this.draggingObject.element.style.top = `${this.draggingObject.y}px`;
+            }
+        }
         
-        const x = event.clientX;
-        const y = event.clientY;
-        
-        // Update object position
-        this.draggingObject.x = x - this.dragOffsetX;
-        this.draggingObject.y = y - this.dragOffsetY;
-        
-        // Keep within bounds
-        this.draggingObject.x = Math.max(0, Math.min(window.innerWidth - this.draggingObject.width, this.draggingObject.x));
-        this.draggingObject.y = Math.max(0, Math.min(window.innerHeight - this.draggingObject.height, this.draggingObject.y));
-        
-        // Update DOM element
-        if (this.draggingObject.element) {
-            this.draggingObject.element.style.left = `${this.draggingObject.x}px`;
-            this.draggingObject.element.style.top = `${this.draggingObject.y}px`;
+        // Handle DOM element dragging
+        if (this.draggingElement) {
+            const x = event.clientX;
+            const y = event.clientY;
+            
+            // Update element position
+            const newLeft = x - this.elementDragOffsetX;
+            const newTop = y - this.elementDragOffsetY;
+            
+            // Apply new position
+            this.draggingElement.style.left = `${newLeft}px`;
+            this.draggingElement.style.top = `${newTop}px`;
+            
+            // Save the new position in the world state
+            this.worldState.movedElements[this.draggingElement.id] = { x: newLeft, y: newTop };
+            this.saveWorldState();
         }
     }
     
@@ -183,37 +338,48 @@ class InteractionManager {
      * Handle mouse up to end dragging
      */
     handleMouseUp(event) {
-        // Only process if currently dragging
-        if (!this.draggingObject) return;
-        
-        // Check for drop on another object
-        const x = event.clientX;
-        const y = event.clientY;
-        
-        if (this.gameEngine.objectManager) {
-            const objects = this.gameEngine.objectManager.getObjectsAt(x, y);
+        // Handle game object dragging end
+        if (this.draggingObject) {
+            // Check for drop on another object
+            const x = event.clientX;
+            const y = event.clientY;
             
-            // Find objects that aren't the one being dragged
-            const dropTargets = objects.filter(obj => obj.id !== this.draggingObject.id);
-            
-            if (dropTargets.length > 0) {
-                // Use the topmost object as the drop target
-                const dropTarget = dropTargets[dropTargets.length - 1];
+            if (this.gameEngine.objectManager) {
+                const objects = this.gameEngine.objectManager.getObjectsAt(x, y);
                 
-                console.log(`Dropped ${this.draggingObject.type} on ${dropTarget.type}`);
+                // Find objects that aren't the one being dragged
+                const dropTargets = objects.filter(obj => obj.id !== this.draggingObject.id);
                 
-                // Handle object combinations
-                this.handleObjectCombination(this.draggingObject, dropTarget);
+                if (dropTargets.length > 0) {
+                    // Use the topmost object as the drop target
+                    const dropTarget = dropTargets[dropTargets.length - 1];
+                    
+                    console.log(`Dropped ${this.draggingObject.type} on ${dropTarget.type}`);
+                    
+                    // Handle object combinations
+                    this.handleObjectCombination(this.draggingObject, dropTarget);
+                }
             }
+            
+            // Remove dragging visual feedback
+            if (this.draggingObject.element) {
+                this.draggingObject.element.classList.remove('dragging');
+            }
+            
+            // Reset dragging state
+            this.draggingObject = null;
         }
         
-        // Remove dragging visual feedback
-        if (this.draggingObject.element) {
-            this.draggingObject.element.classList.remove('dragging');
+        // Handle DOM element dragging end
+        if (this.draggingElement) {
+            // Remove dragging visual feedback
+            this.draggingElement.classList.remove('dragging');
+            
+            // Reset dragging state
+            this.draggingElement = null;
+            this.elementDragOffsetX = 0;
+            this.elementDragOffsetY = 0;
         }
-        
-        // Reset dragging state
-        this.draggingObject = null;
     }
     
     /**
@@ -227,7 +393,7 @@ class InteractionManager {
         let target = document.elementFromPoint(event.clientX, event.clientY);
         
         // Find closest interactable parent
-        while (target && !target.classList.contains('game-interactable')) {
+        while (target && !target.classList.contains('interactable')) {
             target = target.parentElement;
             
             // Stop if reached game container or document body
@@ -237,8 +403,11 @@ class InteractionManager {
         }
         
         // If found an interactable element
-        if (target && target.classList.contains('game-interactable')) {
+        if (target && target.classList.contains('interactable')) {
             console.log('Interacting with website element:', target);
+            
+            // Reduce health of the element when clicked (all elements are breakable)
+            this.damageWebsiteElement(target);
             
             // Process based on interaction type
             const interactionType = target.dataset.gameInteraction || 'generic';
@@ -249,9 +418,9 @@ class InteractionManager {
                     target.style.color = this.getRandomColor();
                     break;
                     
-                case 'text':
-                    // Reduce "health" of text elements when clicked
-                    this.damageWebsiteElement(target);
+                case 'navigation':
+                    // Make nav elements wobble
+                    target.style.transform = `rotate(${(Math.random() - 0.5) * 10}deg)`;
                     break;
                     
                 case 'control':
@@ -259,11 +428,6 @@ class InteractionManager {
                     const offsetX = (Math.random() - 0.5) * 20;
                     const offsetY = (Math.random() - 0.5) * 20;
                     target.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-                    break;
-                    
-                case 'content':
-                    // Toggle visibility
-                    target.classList.toggle('game-damaged');
                     break;
                     
                 case 'image':
@@ -308,9 +472,24 @@ class InteractionManager {
             // Element "destroyed"
             element.classList.add('game-destroyed');
             
+            // Add to broken elements list for persistence
+            if (element.id && !this.worldState.brokenElements.includes(element.id)) {
+                this.worldState.brokenElements.push(element.id);
+                this.saveWorldState();
+            }
+            
             // Special effects based on element type
             if (element.tagName.toLowerCase() === 'p') {
                 element.textContent = '[redacted]';
+            } else if (element.tagName.toLowerCase() === 'img') {
+                element.style.opacity = '0.2';
+                element.style.filter = 'grayscale(100%)';
+            } else if (element.tagName.toLowerCase() === 'button') {
+                element.disabled = true;
+                element.style.opacity = '0.5';
+            } else if (element.tagName.toLowerCase() === 'a') {
+                element.style.textDecoration = 'line-through';
+                element.href = '#broken-link';
             }
         } else if (health === 1) {
             element.classList.add('game-damaged-2');
@@ -469,5 +648,11 @@ class InteractionManager {
         
         document.removeEventListener('mousemove', this.handleMouseMove);
         document.removeEventListener('mouseup', this.handleMouseUp);
+        
+        // Clean up element mousedown listeners
+        const interactables = document.querySelectorAll('.interactable');
+        interactables.forEach(element => {
+            element.removeEventListener('mousedown', this.handleElementMouseDown);
+        });
     }
 }
