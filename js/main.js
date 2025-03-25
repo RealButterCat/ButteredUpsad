@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add a debug reset button at top left (hidden by default)
     addDebugReset();
     
+    // Initialize keyboard controls helper
+    window.keyboardControls = new KeyboardControls();
+    
     console.log('ButteredUpsad loaded successfully!');
 });
 
@@ -40,6 +43,18 @@ function initGame() {
         // Handle Tab key for inventory (prevent default behavior)
         if (event.key === 'Tab' && gameEngine && gameEngine.isRunning) {
             event.preventDefault();
+            
+            // Toggle inventory if engine is running
+            if (gameEngine.inventoryManager) {
+                gameEngine.inventoryManager.toggleInventoryPanel();
+            }
+        }
+        
+        // Handle keyboard shortcuts for stats (Ctrl+S)
+        if (event.key.toLowerCase() === 's' && event.ctrlKey && gameEngine && gameEngine.isRunning) {
+            event.preventDefault();
+            const statsEvent = new CustomEvent('toggle-player-stats');
+            document.dispatchEvent(statsEvent);
         }
     });
 }
@@ -60,6 +75,11 @@ function toggleGame() {
             startGameButton.textContent = 'Start Game';
         }
         
+        // Hide keyboard controls helper
+        if (window.keyboardControls) {
+            window.keyboardControls.hide();
+        }
+        
         console.log('Game stopped');
     } else {
         // Start the game
@@ -74,46 +94,13 @@ function toggleGame() {
             startGameButton.textContent = 'Stop Game';
         }
         
-        // Show the keyboard controls info
-        showKeyboardControlsInfo();
+        // Show keyboard controls helper
+        if (window.keyboardControls) {
+            window.keyboardControls.show();
+        }
         
         console.log('Game started');
     }
-}
-
-/**
- * Show a temporary message with keyboard controls
- */
-function showKeyboardControlsInfo() {
-    // Create a tooltip for controls
-    const tooltip = document.createElement('div');
-    tooltip.className = 'controls-tooltip';
-    tooltip.innerHTML = `
-        <h4>Keyboard Controls</h4>
-        <ul>
-            <li><kbd>Tab</kbd> - Toggle inventory</li>
-            <li><kbd>Ctrl</kbd>+<kbd>S</kbd> - View stats</li>
-            <li><kbd>WASD</kbd> or <kbd>↑↓←→</kbd> - Move</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> - Debug reset</li>
-        </ul>
-    `;
-    
-    document.body.appendChild(tooltip);
-    
-    // Fade in
-    setTimeout(() => {
-        tooltip.style.opacity = '1';
-    }, 100);
-    
-    // Fade out and remove after 5 seconds
-    setTimeout(() => {
-        tooltip.style.opacity = '0';
-        setTimeout(() => {
-            if (tooltip.parentNode) {
-                tooltip.parentNode.removeChild(tooltip);
-            }
-        }, 500);
-    }, 5000);
 }
 
 /**
@@ -137,7 +124,10 @@ function addDebugReset() {
     
     resetButton.addEventListener('click', () => {
         if (gameEngine) {
-            gameEngine.resetGameState();
+            // Add confirmation dialog
+            if (confirm('Are you sure you want to reset all game progress? This cannot be undone.')) {
+                gameEngine.resetGameState();
+            }
         }
     });
     
@@ -159,6 +149,7 @@ const injectGameStyles = () => {
         /* Game element interactions */
         .game-interactable {
             transition: transform 0.2s, color 0.2s, opacity 0.2s;
+            position: relative;
         }
         
         .game-highlight {
@@ -225,50 +216,45 @@ const injectGameStyles = () => {
             z-index: 100 !important;
         }
         
-        /* Controls tooltip */
-        .controls-tooltip {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            background-color: rgba(44, 62, 80, 0.9);
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            z-index: 1000;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        /* Game Mode Transition Effects */
+        #game-container {
+            transition: opacity 0.3s ease-out;
+        }
+        
+        #game-container.hidden {
             opacity: 0;
-            transition: opacity 0.5s;
-            max-width: 250px;
         }
         
-        .controls-tooltip h4 {
-            margin-bottom: 10px;
-            font-size: 14px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            padding-bottom: 5px;
+        #game-container.active {
+            opacity: 1;
         }
         
-        .controls-tooltip ul {
-            list-style-type: none;
-            padding-left: 0;
+        /* Improved hover states for interactable elements */
+        .game-interactable:hover {
+            cursor: pointer;
         }
         
-        .controls-tooltip li {
-            margin-bottom: 8px;
-            font-size: 13px;
+        .game-mode .game-interactable:hover::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border: 1px dashed rgba(231, 76, 60, 0.3);
+            pointer-events: none;
+            z-index: 1;
+            animation: border-pulse 1.5s infinite;
         }
         
-        .controls-tooltip kbd {
-            display: inline-block;
-            padding: 2px 4px;
-            font-family: monospace;
-            font-size: 12px;
-            color: #f9f9f9;
-            background-color: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
-            margin: 0 2px;
+        @keyframes border-pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        
+        /* Hide focus outlines in game mode */
+        .game-mode :focus {
+            outline: none !important;
         }
     `;
     
