@@ -21,6 +21,11 @@ class GameEngine {
         this.dialogManager = null;
         this.questManager = null;
         this.reactivityManager = null;
+        this.uiManager = null;
+        
+        // Auto-save timer
+        this.autoSaveInterval = null;
+        this.autoSaveDelay = 60000; // Save every minute
         
         // Initialize game container
         this.initializeCanvas();
@@ -28,6 +33,7 @@ class GameEngine {
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
         this.handleResize = this.handleResize.bind(this);
+        this.autoSave = this.autoSave.bind(this);
         
         // Event listeners
         window.addEventListener('resize', this.handleResize);
@@ -54,15 +60,20 @@ class GameEngine {
         this.dialogManager = new DialogManager();
         this.questManager = new QuestManager(this);
         
+        // Initialize UI manager first so it can show loading feedback
+        this.uiManager = new UIManager(this);
+        
         // Create world reactivity system (must be after other systems are initialized)
         this.reactivityManager = new WorldReactivity(this);
         
         // Load saved game state if exists
         this.loadGameState();
         
-        // Show game container
+        // Show game container with subtle transition
         this.gameContainer.classList.remove('hidden');
-        this.gameContainer.classList.add('active');
+        setTimeout(() => {
+            this.gameContainer.classList.add('active');
+        }, 50);
         
         // Start game loop
         this.isRunning = true;
@@ -70,6 +81,14 @@ class GameEngine {
         
         // Initialize interactions
         this.interactionManager.initialize();
+        
+        // Start auto-save
+        this.startAutoSave();
+        
+        // Transition UI to game mode
+        if (this.uiManager) {
+            this.uiManager.transitionToGameMode();
+        }
         
         console.log('Game engine started!');
     }
@@ -85,15 +104,31 @@ class GameEngine {
         // Save current game state
         this.saveGameState();
         
-        // Hide game container
+        // Stop auto-save
+        this.stopAutoSave();
+        
+        // Transition UI back to normal mode
+        if (this.uiManager) {
+            this.uiManager.transitionToNormalMode();
+        }
+        
+        // Hide game container with subtle transition
         this.gameContainer.classList.remove('active');
-        this.gameContainer.classList.add('hidden');
+        setTimeout(() => {
+            this.gameContainer.classList.add('hidden');
+        }, 300);
         
         // Stop game loop
         this.isRunning = false;
         
         // Clean up
-        this.interactionManager.cleanup();
+        if (this.interactionManager) {
+            this.interactionManager.cleanup();
+        }
+        
+        if (this.uiManager) {
+            this.uiManager.cleanup();
+        }
         
         console.log('Game engine stopped!');
     }
@@ -179,22 +214,73 @@ class GameEngine {
     }
     
     /**
+     * Start auto-save timer
+     */
+    startAutoSave() {
+        this.autoSaveInterval = setInterval(this.autoSave, this.autoSaveDelay);
+    }
+    
+    /**
+     * Stop auto-save timer
+     */
+    stopAutoSave() {
+        if (this.autoSaveInterval) {
+            clearInterval(this.autoSaveInterval);
+            this.autoSaveInterval = null;
+        }
+    }
+    
+    /**
+     * Auto-save game state
+     */
+    autoSave() {
+        if (!this.isRunning) return;
+        
+        this.saveGameState(true);
+    }
+    
+    /**
      * Save game state to localStorage
      */
-    saveGameState() {
+    saveGameState(isAutoSave = false) {
         const gameState = {
             player: this.player ? this.player.serialize() : null,
             world: this.world ? this.world.serialize() : null,
             objects: this.objectManager ? this.objectManager.serialize() : null,
-            inventory: this.inventoryManager ? this.inventoryManager.serialize() : null
+            inventory: this.inventoryManager ? this.inventoryManager.serialize() : null,
+            savedAt: new Date().toISOString()
         };
         
         localStorage.setItem('butteredUpsad_gameState', JSON.stringify(gameState));
-        console.log('Game state saved!');
+        
+        if (!isAutoSave) {
+            console.log('Game state saved!');
+        }
         
         // Also save reactivity state if available
         if (this.reactivityManager) {
             this.reactivityManager.saveState();
+        }
+        
+        // Show save indicator if UI manager exists and not an auto-save
+        if (this.uiManager && !isAutoSave) {
+            this.uiManager.showNotification('Game progress saved', 'success', 2000);
+        } else if (this.uiManager && isAutoSave) {
+            // Show subtle auto-save indicator
+            const saveIndicator = document.createElement('div');
+            saveIndicator.className = 'save-indicator saving';
+            saveIndicator.textContent = 'Auto-saving...';
+            document.body.appendChild(saveIndicator);
+            
+            // Remove after 1 second
+            setTimeout(() => {
+                saveIndicator.classList.remove('saving');
+                setTimeout(() => {
+                    if (saveIndicator.parentNode) {
+                        saveIndicator.parentNode.removeChild(saveIndicator);
+                    }
+                }, 300);
+            }, 1000);
         }
     }
     
@@ -228,9 +314,37 @@ class GameEngine {
                     this.inventoryManager.deserialize(gameState.inventory);
                 }
                 
+                // Show last saved timestamp if UI manager exists
+                if (this.uiManager && gameState.savedAt) {
+                    const savedDate = new Date(gameState.savedAt);
+                    const now = new Date();
+                    const diffMs = now - savedDate;
+                    const diffMins = Math.round(diffMs / 60000);
+                    
+                    let timeAgo;
+                    if (diffMins < 1) {
+                        timeAgo = 'just now';
+                    } else if (diffMins === 1) {
+                        timeAgo = '1 minute ago';
+                    } else if (diffMins < 60) {
+                        timeAgo = `${diffMins} minutes ago`;
+                    } else if (diffMins < 120) {
+                        timeAgo = '1 hour ago';
+                    } else {
+                        timeAgo = `${Math.floor(diffMins / 60)} hours ago`;
+                    }
+                    
+                    this.uiManager.showNotification(`Game loaded (last saved ${timeAgo})`, 'info', 3000);
+                }
+                
                 console.log('Game state loaded!');
             } catch (error) {
                 console.error('Error loading game state:', error);
+                
+                // Show error notification if UI manager exists
+                if (this.uiManager) {
+                    this.uiManager.showNotification('Error loading saved game', 'error', 3000);
+                }
             }
         }
         
@@ -252,8 +366,15 @@ class GameEngine {
             this.reactivityManager.resetAll();
         }
         
+        // Show confirmation notification if UI manager exists
+        if (this.uiManager) {
+            this.uiManager.showNotification('Game progress reset', 'warning', 3000);
+        }
+        
         // Reload the page to start fresh
-        window.location.reload();
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
     }
 }
 
