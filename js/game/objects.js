@@ -3,6 +3,9 @@
  * Defines various game object types and the manager for them.
  */
 
+/**
+ * Base GameObject class
+ */
 class GameObject {
     constructor(x, y, width, height, type) {
         this.id = Math.random().toString(36).substr(2, 9); // Unique ID
@@ -261,146 +264,6 @@ class CollectibleObject extends GameObject {
 }
 
 /**
- * Server object (breaking it randomizes website colors)
- */
-class ServerObject extends GameObject {
-    constructor(x, y) {
-        const width = 40;
-        const height = 60;
-        super(x, y, width, height, 'server');
-        this.solid = true;
-        this.health = 3;
-        this.maxHealth = 3;
-    }
-    
-    render(ctx) {
-        if (!this.visible) return;
-        
-        // Draw server rack
-        ctx.fillStyle = '#34495e';
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-        
-        // Draw server lights and details
-        ctx.fillStyle = '#2ecc71';
-        ctx.fillRect(this.x + 5, this.y + 10, 5, 5); // Green status light
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(this.x + 5, this.y + 20, 5, 5); // Red status light
-        ctx.fillStyle = '#3498db';
-        ctx.fillRect(this.x + 5, this.y + 30, 5, 5); // Blue status light
-        
-        // Server rack details
-        ctx.fillStyle = '#95a5a6';
-        ctx.fillRect(this.x, this.y + 45, this.width, 2); // Horizontal divider
-        ctx.fillRect(this.x, this.y + 15, this.width, 1); // Thin divider
-        ctx.fillRect(this.x, this.y + 30, this.width, 1); // Thin divider
-    }
-    
-    destroy() {
-        if (this.destroyed) return;
-        
-        super.destroy();
-        
-        // Trigger server break event
-        const serverBreakEvent = new CustomEvent('server-break', {
-            detail: {
-                id: this.id,
-                x: this.x,
-                y: this.y
-            }
-        });
-        
-        document.dispatchEvent(serverBreakEvent);
-    }
-}
-
-/**
- * Key object (unlocks secret section when collected)
- */
-class KeyObject extends GameObject {
-    constructor(x, y) {
-        const size = 25;
-        super(x, y, size, size, 'key');
-        this.solid = false;
-        this.interactive = true;
-    }
-    
-    render(ctx) {
-        if (!this.visible) return;
-        
-        // Draw key
-        ctx.fillStyle = '#f1c40f';
-        
-        // Key head
-        ctx.beginPath();
-        ctx.arc(this.x + this.width/2, this.y + this.height/4, this.width/4, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Key shaft
-        ctx.fillRect(
-            this.x + this.width/2 - 2,
-            this.y + this.height/4,
-            4,
-            this.height/2
-        );
-        
-        // Key teeth
-        ctx.fillRect(
-            this.x + this.width/2,
-            this.y + this.height * 0.6,
-            this.width/4,
-            this.height/10
-        );
-        
-        ctx.fillRect(
-            this.x + this.width/2,
-            this.y + this.height * 0.75,
-            this.width/4,
-            this.height/10
-        );
-        
-        // Glow effect
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.beginPath();
-        ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/1.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#f39c12';
-        ctx.fill();
-        ctx.restore();
-    }
-    
-    onClick(event) {
-        if (!this.interactive || this.destroyed) return;
-        
-        console.log(`Found a key!`);
-        
-        // Trigger key collect event
-        const keyCollectEvent = new CustomEvent('key-collect', {
-            detail: {
-                id: this.id,
-                x: this.x,
-                y: this.y
-            }
-        });
-        
-        document.dispatchEvent(keyCollectEvent);
-        
-        // Add to inventory
-        const inventoryEvent = new CustomEvent('collect-item', {
-            detail: {
-                type: 'key',
-                value: 1,
-                objectId: this.id
-            }
-        });
-        
-        document.dispatchEvent(inventoryEvent);
-        
-        // Destroy this object
-        this.destroy();
-    }
-}
-
-/**
  * NPC object (non-player character for dialog/quests)
  */
 class NPCObject extends GameObject {
@@ -409,6 +272,8 @@ class NPCObject extends GameObject {
         super(x, y, size, size, 'npc');
         this.name = name || 'Unknown NPC';
         this.solid = false;
+        
+        // Dialogue options stored in JSON format
         this.dialogues = [
             { text: "Hello there! I'm an NPC.", options: [
                 { text: "Hello!", responseIndex: 1 },
@@ -428,6 +293,108 @@ class NPCObject extends GameObject {
             ]}
         ];
         this.currentDialogIndex = 0;
+        
+        // Movement properties
+        this.moveSpeed = 20 + Math.random() * 30; // pixels per second, random speed
+        this.moveDirectionX = 0;
+        this.moveDirectionY = 0;
+        this.moveTimer = null; // for changing direction
+        this.isMoving = false;
+        this.isTalking = false; // Pause movement during conversation
+        
+        // Start wandering behavior
+        this.startWandering();
+    }
+    
+    /**
+     * Start random wandering behavior
+     */
+    startWandering() {
+        // Set initial random direction
+        this.changeDirection();
+        
+        // Change direction periodically
+        this.moveTimer = setInterval(() => {
+            if (!this.isTalking) {
+                this.changeDirection();
+            }
+        }, 2000 + Math.random() * 3000); // Change direction every 2-5 seconds
+    }
+    
+    /**
+     * Change NPC movement direction randomly
+     */
+    changeDirection() {
+        // Random chance to stop/start moving
+        if (Math.random() < 0.2) {
+            this.isMoving = false;
+            this.moveDirectionX = 0;
+            this.moveDirectionY = 0;
+            return;
+        }
+        
+        this.isMoving = true;
+        
+        // Generate random direction vector
+        const angle = Math.random() * Math.PI * 2; // Random angle in radians
+        this.moveDirectionX = Math.cos(angle);
+        this.moveDirectionY = Math.sin(angle);
+        
+        // Normalize to ensure consistent speed in all directions
+        const length = Math.sqrt(
+            this.moveDirectionX * this.moveDirectionX + 
+            this.moveDirectionY * this.moveDirectionY
+        );
+        
+        if (length > 0) {
+            this.moveDirectionX /= length;
+            this.moveDirectionY /= length;
+        }
+    }
+    
+    /**
+     * Update NPC state
+     */
+    update(deltaTime) {
+        // Don't move if talking or destroyed
+        if (this.isTalking || this.destroyed) return;
+        
+        // Move in the current direction if moving
+        if (this.isMoving) {
+            const moveAmount = this.moveSpeed * deltaTime;
+            
+            // Calculate new position
+            const newX = this.x + this.moveDirectionX * moveAmount;
+            const newY = this.y + this.moveDirectionY * moveAmount;
+            
+            // Check boundaries to stay within screen and not block critical paths
+            const padding = 20; // padding to stay away from edges
+            const minX = padding;
+            const minY = padding;
+            const maxX = window.innerWidth - this.width - padding;
+            const maxY = window.innerHeight - this.height - padding;
+            
+            // Apply position with boundary checks
+            if (newX >= minX && newX <= maxX) {
+                this.x = newX;
+            } else {
+                // Hit boundary, reverse direction on x-axis
+                this.moveDirectionX *= -1;
+            }
+            
+            if (newY >= minY && newY <= maxY) {
+                this.y = newY;
+            } else {
+                // Hit boundary, reverse direction on y-axis
+                this.moveDirectionY *= -1;
+            }
+            
+            // Update DOM element position if it exists
+            if (this.element) {
+                this.element.style.left = `${this.x}px`;
+                this.element.style.top = `${this.y}px`;
+            }
+        }
     }
     
     render(ctx) {
@@ -454,6 +421,9 @@ class NPCObject extends GameObject {
         
         console.log(`Talking to NPC: ${this.name}`);
         
+        // Set talking state to pause movement
+        this.isTalking = true;
+        
         // Trigger dialog event
         const dialogEvent = new CustomEvent('show-dialog', {
             detail: {
@@ -474,6 +444,61 @@ class NPCObject extends GameObject {
     
     setCurrentDialog(index) {
         this.currentDialogIndex = index;
+        
+        // Resume wandering if dialog ends (index is negative)
+        if (index < 0) {
+            this.isTalking = false;
+        }
+    }
+    
+    /**
+     * Clean up resources when destroyed
+     */
+    destroy() {
+        // Clear the wandering timer
+        if (this.moveTimer) {
+            clearInterval(this.moveTimer);
+            this.moveTimer = null;
+        }
+        
+        // Call parent destroy method
+        super.destroy();
+    }
+    
+    /**
+     * Enhanced serialization including wandering state
+     */
+    serialize() {
+        const data = super.serialize();
+        return {
+            ...data,
+            name: this.name,
+            dialogues: this.dialogues,
+            currentDialogIndex: this.currentDialogIndex,
+            moveSpeed: this.moveSpeed,
+            isMoving: this.isMoving
+        };
+    }
+    
+    /**
+     * Enhanced deserialization
+     */
+    deserialize(data) {
+        super.deserialize(data);
+        
+        // Restore NPC-specific properties
+        this.name = data.name || this.name;
+        this.dialogues = data.dialogues || this.dialogues;
+        this.currentDialogIndex = data.currentDialogIndex || 0;
+        this.moveSpeed = data.moveSpeed || (20 + Math.random() * 30);
+        
+        // Reset movement state and restart wandering
+        this.isMoving = data.isMoving !== undefined ? data.isMoving : true;
+        
+        // Start wandering again if no timer exists
+        if (!this.moveTimer) {
+            this.startWandering();
+        }
     }
 }
 
@@ -599,7 +624,7 @@ class GameObjectManager {
      * Spawn random objects around the world
      */
     spawnRandomObjects(count = 10) {
-        const objectTypes = ['wall', 'tree', 'collectible', 'npc', 'server', 'key'];
+        const objectTypes = ['wall', 'tree', 'collectible', 'npc'];
         const npcNames = ['Guide', 'Trader', 'Explorer', 'Wizard', 'Blacksmith'];
         
         for (let i = 0; i < count; i++) {
@@ -627,14 +652,6 @@ class GameObjectManager {
                 case 'npc':
                     const name = npcNames[Math.floor(Math.random() * npcNames.length)];
                     object = new NPCObject(x, y, name);
-                    break;
-                    
-                case 'server':
-                    object = new ServerObject(x, y);
-                    break;
-                    
-                case 'key':
-                    object = new KeyObject(x, y);
                     break;
                     
                 default:
@@ -700,14 +717,6 @@ class GameObjectManager {
                     
                 case 'NPCObject':
                     object = new NPCObject(objData.x, objData.y, objData.name);
-                    break;
-                    
-                case 'ServerObject':
-                    object = new ServerObject(objData.x, objData.y);
-                    break;
-                    
-                case 'KeyObject':
-                    object = new KeyObject(objData.x, objData.y);
                     break;
                     
                 default:
