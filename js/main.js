@@ -6,7 +6,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log('ButteredUpsad is loading...');
     
-    // Initialize game components when dom is ready
+    // Initialize game components when DOM is ready
     initGame();
     
     // Add a debug reset button at top left (hidden by default)
@@ -114,44 +114,8 @@ function initGame() {
     // Create the game engine instance
     gameEngine = new GameEngine();
     
-    // Set up start game button
-    const startGameButton = document.getElementById('start-game');
-    
-    if (startGameButton) {
-        startGameButton.addEventListener('click', () => {
-            // Disable button to prevent multiple clicks
-            startGameButton.disabled = true;
-            startGameButton.textContent = 'Loading...';
-            
-            // Show subtle loading indicator
-            const loadingIndicator = createLoadingIndicator();
-            document.body.appendChild(loadingIndicator);
-            
-            // Short delay to allow for visual transition
-            setTimeout(() => {
-                loadingIndicator.classList.add('visible');
-            }, 50);
-            
-            // Start game with a short delay for transition
-            setTimeout(() => {
-                startGame();
-                
-                // Remove loading indicator
-                setTimeout(() => {
-                    loadingIndicator.classList.remove('visible');
-                    setTimeout(() => {
-                        if (loadingIndicator.parentNode) {
-                            loadingIndicator.parentNode.removeChild(loadingIndicator);
-                        }
-                    }, 300);
-                }, 500);
-                
-                // Update button text
-                startGameButton.textContent = 'Stop Game';
-                startGameButton.disabled = false;
-            }, 800);
-        });
-    }
+    // Set up start game buttons
+    setupStartGameButtons();
     
     // Add keyboard shortcut (G) to toggle game
     document.addEventListener('keydown', (event) => {
@@ -176,6 +140,80 @@ function initGame() {
             document.dispatchEvent(statsEvent);
         }
     });
+}
+
+/**
+ * Set up all Start Game buttons
+ */
+function setupStartGameButtons() {
+    // Nav bar button
+    const navStartButton = document.getElementById('start-game');
+    
+    // Hero section button
+    const heroStartButton = document.getElementById('hero-start-game');
+    
+    // Add click handlers to both buttons
+    if (navStartButton) {
+        navStartButton.addEventListener('click', handleStartGameClick);
+    }
+    
+    if (heroStartButton) {
+        heroStartButton.addEventListener('click', handleStartGameClick);
+    }
+}
+
+/**
+ * Handle click on any Start Game button
+ */
+function handleStartGameClick(event) {
+    // Get the clicked button
+    const clickedButton = event.currentTarget;
+    
+    // Get all start game buttons
+    const navStartButton = document.getElementById('start-game');
+    const heroStartButton = document.getElementById('hero-start-game');
+    
+    // Disable all buttons to prevent multiple clicks
+    if (navStartButton) navStartButton.disabled = true;
+    if (heroStartButton) heroStartButton.disabled = true;
+    
+    // Update button text
+    clickedButton.textContent = 'Loading...';
+    
+    // Show subtle loading indicator
+    const loadingIndicator = createLoadingIndicator();
+    document.body.appendChild(loadingIndicator);
+    
+    // Short delay to allow for visual transition
+    setTimeout(() => {
+        loadingIndicator.classList.add('visible');
+    }, 50);
+    
+    // Start game with a short delay for transition
+    setTimeout(() => {
+        startGame();
+        
+        // Remove loading indicator
+        setTimeout(() => {
+            loadingIndicator.classList.remove('visible');
+            setTimeout(() => {
+                if (loadingIndicator.parentNode) {
+                    loadingIndicator.parentNode.removeChild(loadingIndicator);
+                }
+            }, 300);
+        }, 500);
+        
+        // Update buttons
+        if (navStartButton) {
+            navStartButton.textContent = 'Stop Game';
+            navStartButton.disabled = false;
+        }
+        
+        if (heroStartButton) {
+            heroStartButton.textContent = 'Stop Game';
+            heroStartButton.disabled = false;
+        }
+    }, 800);
 }
 
 /**
@@ -209,7 +247,7 @@ function startGame() {
     gameEngine.start();
     
     // Spawn default objects if no saved state exists
-    if (!localStorage.getItem('butteredUpsad_gameState')) {
+    if (!localStorage.getItem('butteredUpsad_gameState') && !sessionStorage.getItem('butteredUpsad_gameState')) {
         generateDefaultWorld();
     }
     
@@ -292,15 +330,23 @@ function generateDefaultWorld() {
 function toggleGame() {
     if (!gameEngine) return;
     
-    const startGameButton = document.getElementById('start-game');
+    // Get all start game buttons
+    const navStartButton = document.getElementById('start-game');
+    const heroStartButton = document.getElementById('hero-start-game');
     
     if (gameEngine.isRunning) {
         // Stop the game
         gameEngine.stop();
         
-        if (startGameButton) {
-            startGameButton.textContent = 'Start Game';
-            startGameButton.disabled = false;
+        // Update buttons
+        if (navStartButton) {
+            navStartButton.textContent = 'Start Adventure';
+            navStartButton.disabled = false;
+        }
+        
+        if (heroStartButton) {
+            heroStartButton.textContent = 'Start Your Adventure';
+            heroStartButton.disabled = false;
         }
         
         // Hide keyboard controls helper
@@ -313,16 +359,22 @@ function toggleGame() {
         
         console.log('Game stopped');
     } else {
-        if (startGameButton) {
-            startGameButton.disabled = true;
-        }
+        // Disable buttons
+        if (navStartButton) navStartButton.disabled = true;
+        if (heroStartButton) heroStartButton.disabled = true;
         
         // Start game with transitions
         startGame();
         
-        if (startGameButton) {
-            startGameButton.textContent = 'Stop Game';
-            startGameButton.disabled = false;
+        // Update buttons
+        if (navStartButton) {
+            navStartButton.textContent = 'Stop Game';
+            navStartButton.disabled = false;
+        }
+        
+        if (heroStartButton) {
+            heroStartButton.textContent = 'Stop Game';
+            heroStartButton.disabled = false;
         }
     }
 }
@@ -366,18 +418,30 @@ function addDebugReset() {
 }
 
 /**
- * Check if localStorage is available
+ * Check if localStorage is available and use sessionStorage as fallback
  */
-function isLocalStorageAvailable() {
+function saveGameData(key, data) {
     try {
-        const test = 'test';
-        localStorage.setItem(test, test);
-        localStorage.removeItem(test);
-        return true;
+        localStorage.setItem(key, data);
     } catch (e) {
         console.warn('localStorage not available. Falling back to sessionStorage.');
-        return false;
+        sessionStorage.setItem(key, data);
     }
+}
+
+/**
+ * Load game data from storage with fallback
+ */
+function loadGameData(key) {
+    // Try localStorage first
+    const localData = localStorage.getItem(key);
+    
+    if (localData !== null) {
+        return localData;
+    }
+    
+    // Fall back to sessionStorage
+    return sessionStorage.getItem(key);
 }
 
 /**
@@ -453,11 +517,6 @@ const injectGameStyles = () => {
             opacity: 0.7;
             transform: scale(1.1);
             z-index: 100 !important;
-        }
-        
-        /* Game Mode Transition Effects */
-        #game-container {
-            transition: opacity 0.3s ease-out;
         }
         
         /* Game Mode styles */
