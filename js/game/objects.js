@@ -422,7 +422,7 @@ class NPCObject extends GameObject {
         console.log(`Talking to NPC: ${this.name}`);
         
         // Set talking state to pause movement
-        this.isTalking = true;
+        this.setTalking(true);
         
         // Trigger dialog event
         const dialogEvent = new CustomEvent('show-dialog', {
@@ -433,6 +433,13 @@ class NPCObject extends GameObject {
         });
         
         document.dispatchEvent(dialogEvent);
+    }
+    
+    /**
+     * Set talking state to pause/resume wandering
+     */
+    setTalking(isTalking) {
+        this.isTalking = isTalking;
     }
     
     getDialog(index) {
@@ -447,7 +454,7 @@ class NPCObject extends GameObject {
         
         // Resume wandering if dialog ends (index is negative)
         if (index < 0) {
-            this.isTalking = false;
+            this.setTalking(false);
         }
     }
     
