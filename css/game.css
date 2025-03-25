@@ -92,6 +92,40 @@
     border-bottom-color: #2980b9;
 }
 
+/* Speech Bubble for NPCs */
+.speech-bubble {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #2c3e50;
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 14px;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.speech-bubble:after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    margin-left: -8px;
+    border-width: 8px 8px 0;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.9) transparent;
+}
+
+.speech-bubble.hidden {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+}
+
 /* Movable objects */
 .movable {
     cursor: grab;
@@ -298,6 +332,60 @@
 
 #dialog-options button:hover {
     background-color: rgba(52, 152, 219, 1);
+}
+
+/* Quest Notification */
+.quest-notification {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(39, 174, 96, 0.9);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    animation: quest-notification 0.5s ease-out;
+}
+
+.quest-notification.fade-out {
+    animation: quest-notification-fadeout 0.5s ease-out forwards;
+}
+
+@keyframes quest-notification {
+    0% { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+    100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+@keyframes quest-notification-fadeout {
+    0% { transform: translateX(-50%) translateY(0); opacity: 1; }
+    100% { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+}
+
+/* Flash effect for quest rewards */
+.flash-gold {
+    animation: flash-gold 1s ease-out;
+}
+
+@keyframes flash-gold {
+    0%, 100% { background-color: inherit; }
+    50% { background-color: rgba(241, 196, 15, 0.3); }
+}
+
+/* Rainbow text effect for quest rewards */
+.rainbow-text {
+    animation: rainbow-text 5s infinite;
+    background-image: linear-gradient(to right, #e74c3c, #f1c40f, #2ecc71, #3498db, #9b59b6);
+    background-size: 200% auto;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+@keyframes rainbow-text {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
 }
 
 /* Shake animation for damaged objects */
