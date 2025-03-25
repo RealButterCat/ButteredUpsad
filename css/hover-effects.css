@@ -1,62 +1,60 @@
 /* 
- * Dedicated hover effects stylesheet
- * Applied immediately on page load independent of game state
+ * Immediate Hover Effects
+ * These styles are applied as soon as the page loads, 
+ * independent of game state or initialization.
  */
 
-/* Primary hover effect for standard interactive elements */
-.interactable:hover,
-main a:hover,
-.interactable.active:hover {
+/* Default hover behavior for interactive elements */
+.interactable:hover {
     transform: scale(1.05);
+    transition: transform 0.2s ease, color 0.2s ease;
 }
 
-/* Navigation-specific hover effects */
-nav .nav-links a:hover {
+/* Element-specific hover behaviors */
+h1.interactable:hover, 
+h2.interactable:hover,
+.blog-post h1:hover,
+.blog-post h2:hover {
+    /* Headings should not scale but can change color */
+    transform: none !important;
+    color: #3498db !important;
+}
+
+/* Explicit protection for specific sections */
+header, header *,
+footer, footer *,
+.blog-post, .blog-post *,
+#blog .interactable, 
+#blog h1, #blog h2, #blog p,
+#contact, #contact *,
+form, form * {
+    /* These elements should never transform on hover */
+    transform: none !important;
+}
+
+/* Navigation links hover behavior */
+.nav-links a:hover {
     color: #3498db !important;
     transform: translateY(-2px) !important;
 }
 
-/* Disable hover effects for specific sections */
-header, 
-header *,
-footer, 
-footer *,
-#blog, 
-#blog *,
-.blog-post, 
-.blog-post *,
-#contact, 
-#contact *,
-form, 
-form * {
-    transform: none !important;
-}
-
-/* Heading-specific hover behavior */
-h1:hover, 
-h2:hover {
-    /* Disable scale transform */
-    transform: none !important;
-    /* Apply subtle color change instead */
-    color: #3498db;
+/* Override for Start Game button to maintain its hover effect */
+#start-game:hover,
+#hero-start-game:hover {
+    background-color: #c0392b !important;
+    transform: scale(1.05) !important;
 }
 
 /* Game UI elements protection */
-#game-container,
-#game-container *,
-#inventory-panel,
-#dialog-box,
+#game-container, #game-container *,
+#inventory-panel, #inventory-panel *,
+#dialog-box, #dialog-box *,
 #game-mode-indicator,
 #keyboard-controls,
 #keyboard-controls-panel,
 .game-notification,
 .game-tooltip,
 .save-indicator {
+    /* Game UI should not transform on hover */
     transform: none !important;
-}
-
-/* Button hover states that should be preserved */
-#start-game:hover,
-.hero-cta:hover {
-    transform: scale(1.05) !important;
 }
