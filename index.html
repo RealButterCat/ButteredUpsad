@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ButteredUpsad - Interactive Website RPG</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <!-- Load hover effects first to ensure immediate application -->
     <link rel="stylesheet" href="css/hover-effects.css">
+    <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/game.css">
     <link rel="stylesheet" href="css/ui.css">
 </head>
 <body>
     <!-- Regular Website Layout -->
-    <header>
+    <header class="ui-protected">
         <nav>
             <div class="logo">ButteredUpsad</div>
             <ul class="nav-links">
@@ -19,7 +20,7 @@
                 <li><a href="#about">About</a></li>
                 <li><a href="#blog">Blog</a></li>
                 <li><a href="#contact">Contact</a></li>
-                <li><button id="start-game">Start Adventure</button></li>
+                <li><button id="start-game" class="ui-protected">Start Adventure</button></li>
             </ul>
         </nav>
     </header>
@@ -31,7 +32,7 @@
                 <div class="hero-content">
                     <h1 class="hero-title">Welcome to ButteredUpsad</h1>
                     <p class="hero-description">This seems like a normal website, but it hides a secret interactive RPG. Everything you see can be clicked, dragged, or broken!</p>
-                    <button id="hero-start-game" class="hero-cta">Start Your Adventure</button>
+                    <button id="hero-start-game" class="hero-cta ui-protected">Start Your Adventure</button>
                 </div>
             </div>
             
@@ -103,14 +104,14 @@
         </section>
     </main>
 
-    <footer>
+    <footer class="ui-protected">
         <div class="container">
             <p>&copy; 2025 ButteredUpsad. All rights reserved.</p>
         </div>
     </footer>
 
     <!-- Game Layer (Hidden by default) -->
-    <div id="game-container" class="hidden">
+    <div id="game-container" class="hidden ui-protected">
         <!-- Canvas for rendering game graphics -->
         <canvas id="game-canvas"></canvas>
         
@@ -118,13 +119,13 @@
         <div id="player" class="game-object"></div>
         
         <!-- Inventory panel -->
-        <div id="inventory-panel" class="hidden">
+        <div id="inventory-panel" class="hidden ui-protected">
             <h3>Inventory</h3>
             <div id="inventory-items"></div>
         </div>
         
         <!-- Dialog box for NPCs -->
-        <div id="dialog-box" class="hidden">
+        <div id="dialog-box" class="hidden ui-protected">
             <div id="dialog-text"></div>
             <div id="dialog-options"></div>
         </div>
